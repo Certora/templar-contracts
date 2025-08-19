@@ -47,7 +47,7 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
 	let yield_borrow_asset_protocol_post = market.static_yield
           .get(&protocol_id).unwrap_or_default().borrow_asset;
 
- 	cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + 1 + u128::from(amount));
+ 	cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));
 }
 
 // #[near(serializers=[])]
