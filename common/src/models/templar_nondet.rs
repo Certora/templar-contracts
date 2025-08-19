@@ -2,12 +2,17 @@ use std::str::FromStr;
 
 use near_sdk::{json_types::U128, AccountId};
 
-use crate::{accumulator::Accumulator, asset::{BorrowAsset, FungibleAssetAmount}, supply::{IncomingDeposit, SupplyPosition}};
+use crate::{accumulator::Accumulator, asset::{BorrowAsset, CollateralAsset, FungibleAssetAmount}, borrow::BorrowPosition, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}};
 
 // Abakst: move these to CVLR?
 macro_rules! make_project_nondet_ {
     [$name:tt, $dollar:tt] => {
             pub trait $name { fn nondet() -> Self; }
+            impl <A: $name, B: $name> $name for (A, B) {
+                fn nondet() -> Self {
+                    (A::nondet(), B::nondet())
+                }
+            }
             macro_rules! declare_nondet {
                 (from_nondet, $t:ty) => {
                     impl $name for $t { 
@@ -58,6 +63,7 @@ declare_nondet!(from_nondet, i32);
 declare_nondet!(from_nondet, i128);
 declare_nondet!(from_nondet, bool);
 declare_nondet!(from_nondet, FungibleAssetAmount<BorrowAsset>);
+declare_nondet!(from_nondet, FungibleAssetAmount<CollateralAsset>);
 declare_nondet!(
     Accumulator<BorrowAsset>,
     total,
@@ -84,6 +90,30 @@ declare_nondet!(
     SupplyPosition, 
     started_at_block_timestamp_ms, borrow_asset_deposit, borrow_asset_yield => 
     SupplyPosition::new_raw(started_at_block_timestamp_ms, borrow_asset_yield, borrow_asset_deposit)
+);
+
+declare_nondet!(
+    BorrowPosition,
+            started_at_block_timestamp_ms,
+            collateral_asset_deposit,
+            borrow_asset_principal,
+            borrow_asset_fees,
+            temporary_lock,
+            is_liquidation_locked =>
+            BorrowPosition::new_raw(
+            started_at_block_timestamp_ms,
+            collateral_asset_deposit,
+            borrow_asset_principal,
+            borrow_asset_fees,
+            temporary_lock,
+            is_liquidation_locked
+            )
+        );
+
+declare_nondet!(
+    StaticYieldRecord,
+    collateral_asset, borrow_asset =>
+    StaticYieldRecord { collateral_asset, borrow_asset }
 );
 
 pub trait LiftOption {

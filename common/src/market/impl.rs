@@ -1,7 +1,7 @@
-use std::{borrow::Borrow, cell::{RefCell, UnsafeCell}, collections::HashMap, marker::PhantomData, net::Incoming};
+use std::collections::HashMap;
 
 use near_sdk::{
-    collections::{LookupMap, UnorderedMap}, env, near, serde::Serialize, AccountId, BorshStorageKey, IntoStorageKey
+    collections::{LookupMap, UnorderedMap}, env, near, AccountId, BorshStorageKey, IntoStorageKey
 };
 
 use crate::{
@@ -37,7 +37,6 @@ pub struct Market {
     pub borrow_asset_deposited_active: BorrowAssetAmount,
     /// Mapping of upcoming snapshot indices to amounts of borrow asset that will be activated.
     pub borrow_asset_deposited_incoming: models::hash_map::HashMap<u32, BorrowAssetAmount>,
-    //pub borrow_asset_deposited_incoming: HashMap<u32, BorrowAssetAmount>,
     /// Sending borrow asset out, because if somebody sends the contract borrow asset, it's ok for the
     /// contract to attempt to fulfill withdrawal request, even if the market thinks it doesn't have
     /// enough to fulfill.
@@ -48,12 +47,12 @@ pub struct Market {
     pub borrow_asset_borrowed: BorrowAssetAmount,
     /// Market-wide collateral asset deposit tracking.
     pub collateral_asset_deposited: CollateralAssetAmount,
-    pub(crate) supply_positions: UnorderedMap<AccountId, SupplyPosition>,
-    pub(crate) borrow_positions: UnorderedMap<AccountId, BorrowPosition>,
+    pub(crate) supply_positions: models::unordered_map::UnorderedMap<AccountId, SupplyPosition>,
+    pub(crate) borrow_positions: models::unordered_map::UnorderedMap<AccountId, BorrowPosition>,
     pub current_snapshot: Snapshot,
     pub finalized_snapshots: ChunkedAppendOnlyList<Snapshot, 128>,
     pub withdrawal_queue: WithdrawalQueue,
-    pub static_yield: LookupMap<AccountId, StaticYieldRecord>,
+    pub static_yield: models::lookup_map::LookupMap<AccountId, StaticYieldRecord>,
 }
 
 impl Market {
@@ -85,12 +84,12 @@ impl Market {
             borrow_asset_in_flight: 0.into(),
             borrow_asset_borrowed: 0.into(),
             collateral_asset_deposited: 0.into(),
-            supply_positions: UnorderedMap::new(key!(SupplyPositions)),
-            borrow_positions: UnorderedMap::new(key!(BorrowPositions)),
+            supply_positions: models::unordered_map::UnorderedMap::new(key!(SupplyPositions)),
+            borrow_positions: models::unordered_map::UnorderedMap::new(key!(BorrowPositions)),
             current_snapshot,
             finalized_snapshots: ChunkedAppendOnlyList::new(key!(FinalizedSnapshots)),
             withdrawal_queue: WithdrawalQueue::new(key!(WithdrawalQueue)),
-            static_yield: LookupMap::new(key!(StaticYield)),
+            static_yield: models::lookup_map::LookupMap::new(key!(StaticYield)),
         };
 
         self_.finalized_snapshots.push(first_snapshot);

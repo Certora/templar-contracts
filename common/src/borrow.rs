@@ -77,6 +77,24 @@ impl BorrowPosition {
         }
     }
 
+    pub fn new_raw(
+        started_at_block_timestamp_ms: Option<U64>,
+        collateral_asset_deposit: CollateralAssetAmount,
+        borrow_asset_principal: BorrowAssetAmount,
+        borrow_asset_fees: Accumulator<BorrowAsset>,
+        temporary_lock: BorrowAssetAmount,
+        is_liquidation_locked: bool,
+    ) -> Self {
+        Self {
+            started_at_block_timestamp_ms,
+            collateral_asset_deposit,
+            borrow_asset_principal,
+            borrow_asset_fees,
+            temporary_lock,
+            is_liquidation_locked,
+        }
+    }
+
     pub(crate) fn full_liquidation(&mut self, current_snapshot_index: u32) {
         self.is_liquidation_locked = false;
         self.started_at_block_timestamp_ms = None;
