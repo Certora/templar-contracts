@@ -14,6 +14,7 @@ pub mod static_yield;
 pub mod supply;
 pub mod time_chunk;
 pub mod withdrawal_queue;
+pub mod models;
 
 pub static MS_IN_A_YEAR: std::sync::LazyLock<number::Decimal> =
     std::sync::LazyLock::new(|| number::Decimal::from(31_556_952_000_u128)); // 1000 * 60 * 60 * 24 * 365.2425

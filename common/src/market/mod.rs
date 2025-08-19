@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 
 use near_sdk::{env, near, AccountId};
 
-use crate::{asset::BorrowAssetAmount, number::Decimal};
+use crate::{asset::BorrowAssetAmount, models, number::Decimal};
 mod configuration;
 pub use configuration::{MarketConfiguration, APY_LIMIT};
 mod external;
@@ -23,7 +23,7 @@ pub mod error {
 pub struct BorrowAssetMetrics {
     pub available: BorrowAssetAmount,
     pub deposited_active: BorrowAssetAmount,
-    pub deposited_incoming: HashMap<u32, BorrowAssetAmount>,
+    pub deposited_incoming: models::hash_map::HashMap<u32, BorrowAssetAmount>,
     pub borrowed: BorrowAssetAmount,
 }
 

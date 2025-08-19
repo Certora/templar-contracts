@@ -23,19 +23,19 @@ impl Contract {
 
     pub fn execute_supply(&mut self, account_id: AccountId, amount: BorrowAssetAmount) {
         if self.supply_position_ref(account_id.clone()).is_none() {
-            // self.charge_for_storage(
-            //     &account_id,
-            //     self.storage_usage_supply_position + self.storage_usage_snapshot * 2,
-            // );
+            self.charge_for_storage(
+                &account_id,
+                self.storage_usage_supply_position + self.storage_usage_snapshot * 2,
+            );
         }
 
-        // let mut supply_position = self.get_or_create_supply_position_guard(account_id);
-        // let proof = supply_position.accumulate_yield();
-        // supply_position.record_deposit(proof, amount, env::block_timestamp_ms());
-        // require!(
-        //     supply_position.is_within_allowable_range(),
-        //     "New supply position is outside of allowable range",
-        // );
+        let mut supply_position = self.get_or_create_supply_position_guard(account_id);
+        let proof = supply_position.accumulate_yield();
+        supply_position.record_deposit(proof, amount, env::block_timestamp_ms());
+        require!(
+            supply_position.is_within_allowable_range(),
+            "New supply position is outside of allowable range",
+        );
     }
 
     pub fn execute_collateralize(

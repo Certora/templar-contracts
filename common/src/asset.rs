@@ -185,6 +185,15 @@ pub struct FungibleAssetAmount<T: AssetClass> {
     discriminant: PhantomData<T>,
 }
 
+impl <T: AssetClass> cvlr::nondet::Nondet for FungibleAssetAmount<T> {
+    fn nondet() -> Self {
+        Self {
+            amount: U128(cvlr::nondet()),
+            discriminant: PhantomData
+        }
+    }
+}
+
 impl<T: AssetClass> Default for FungibleAssetAmount<T> {
     fn default() -> Self {
         Self::zero()

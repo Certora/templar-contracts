@@ -1,8 +1,7 @@
-use std::collections::HashMap;
+use std::{borrow::Borrow, cell::{RefCell, UnsafeCell}, collections::HashMap, marker::PhantomData, net::Incoming};
 
 use near_sdk::{
-    collections::{LookupMap, UnorderedMap},
-    env, near, AccountId, BorshStorageKey, IntoStorageKey,
+    collections::{LookupMap, UnorderedMap}, env, near, serde::Serialize, AccountId, BorshStorageKey, IntoStorageKey
 };
 
 use crate::{
@@ -17,6 +16,7 @@ use crate::{
     static_yield::StaticYieldRecord,
     supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
     withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue},
+    models,
 };
 
 #[derive(BorshStorageKey)]
@@ -36,7 +36,8 @@ pub struct Market {
     /// Total amount of borrow asset earning interest in the market.
     pub borrow_asset_deposited_active: BorrowAssetAmount,
     /// Mapping of upcoming snapshot indices to amounts of borrow asset that will be activated.
-    pub borrow_asset_deposited_incoming: HashMap<u32, BorrowAssetAmount>,
+    pub borrow_asset_deposited_incoming: models::hash_map::HashMap<u32, BorrowAssetAmount>,
+    //pub borrow_asset_deposited_incoming: HashMap<u32, BorrowAssetAmount>,
     /// Sending borrow asset out, because if somebody sends the contract borrow asset, it's ok for the
     /// contract to attempt to fulfill withdrawal request, even if the market thinks it doesn't have
     /// enough to fulfill.
@@ -80,7 +81,7 @@ impl Market {
             prefix: prefix.clone(),
             configuration,
             borrow_asset_deposited_active: 0.into(),
-            borrow_asset_deposited_incoming: HashMap::new(),
+            borrow_asset_deposited_incoming: models::hash_map::HashMap::new(HashMap::new()),
             borrow_asset_in_flight: 0.into(),
             borrow_asset_borrowed: 0.into(),
             collateral_asset_deposited: 0.into(),

@@ -13,6 +13,7 @@ near-sdk.workspace = true
 thiserror.workspace = true
 primitive-types.workspace = true
 schemars.workspace = true
+cvlr.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

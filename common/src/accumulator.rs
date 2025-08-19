@@ -25,6 +25,22 @@ impl<T: AssetClass> Accumulator<T> {
         }
     }
 
+    pub(crate) fn new_raw(
+        total: FungibleAssetAmount<T>,
+        fraction_as_u128_dividend: U128,
+        next_snapshot_index: u32,
+        pending_estimate: FungibleAssetAmount<T>,
+        amortized: FungibleAssetAmount<T>,
+    ) -> Self {
+        Self {
+            total,
+            fraction_as_u128_dividend,
+            next_snapshot_index,
+            pending_estimate,
+            amortized,
+        }
+    }
+
     pub fn get_next_snapshot_index(&self) -> u32 {
         self.next_snapshot_index
     }

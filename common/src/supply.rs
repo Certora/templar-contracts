@@ -1,14 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
 use near_sdk::{env, json_types::U64, near, require, AccountId};
+use crate::models;
 
 use crate::{
-    accumulator::{AccumulationRecord, Accumulator},
-    asset::{BorrowAsset, BorrowAssetAmount, FungibleAssetAmount},
-    asset_op,
-    event::MarketEvent,
-    market::{Market, WithdrawalResolution},
-    number::Decimal,
+    accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, FungibleAssetAmount}, asset_op, event::MarketEvent, market::{Market, WithdrawalResolution}, number::Decimal
 };
 
 /// This struct can only be constructed after accumulating yield on a
@@ -27,7 +23,7 @@ pub struct IncomingDeposit {
 #[near(serializers = [json, borsh])]
 pub struct Deposit {
     pub active: BorrowAssetAmount,
-    pub incoming: Vec<IncomingDeposit>,
+    pub incoming: models::vec::Vec<IncomingDeposit> ,
     pub outgoing: BorrowAssetAmount,
 }
 
@@ -57,6 +53,19 @@ impl SupplyPosition {
             borrow_asset_deposit: Deposit::default(),
             borrow_asset_yield: Accumulator::new(current_snapshot_index),
         }
+    }
+
+    pub(crate) fn new_raw(
+        started_at_block_timestamp_ms: Option<U64>,
+        borrow_asset_deposit: Deposit,
+        borrow_asset_yield: Accumulator<BorrowAsset>,
+    ) -> Self {
+        Self {
+            started_at_block_timestamp_ms,
+            borrow_asset_deposit,
+            borrow_asset_yield,
+        }
+
     }
 
     pub fn get_deposit(&self) -> &Deposit {
@@ -155,7 +164,7 @@ impl<M: Deref<Target = Market>> SupplyPositionRef<M> {
                 .position
                 .borrow_asset_deposit
                 .incoming
-                .get(next_incoming)
+                .get(next_incoming) 
                 .filter(|incoming| incoming.activate_at_snapshot_index as usize == i)
             {
                 next_incoming += 1;

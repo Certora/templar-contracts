@@ -28,15 +28,14 @@ container_build_command = [
 ]
 
 [dependencies]
+borsh.workspace = true
 getrandom.workspace = true
 near-sdk.workspace = true
 near-sdk-contract-tools.workspace = true
 near-contract-standards.workspace = true
 templar-common.workspace = true
 templar-market-contract = { path = "../market" }
-
-[dependencies.cvlr]
-git = "https://github.com/Certora/cvlr.git"
+cvlr.workspace = true
 
 [dev-dependencies]
 near-sdk = { workspace = true, features = ["unit-testing"] }
