@@ -18,7 +18,7 @@ impl<K, V, T> ApplyRule for SplitMap<K, V, T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Debug)]
 #[near(serializers = [json, borsh])]
 pub struct SplitMap<K, V, T> 
 {
@@ -26,6 +26,21 @@ pub struct SplitMap<K, V, T>
     pub(crate) the_v: Option<V>,
     pub(crate) bot: RefCell<V>,
     pub(crate) d: PhantomData<T> ,
+}
+
+impl <K: PartialEq, V: PartialEq, T> PartialEq for SplitMap<K, V, T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.the_x == other.the_x && self.the_v == other.the_v && self.bot == other.bot && self.d == other.d
+    }
+}
+
+impl <K: Eq, V: Eq, T> Eq for SplitMap<K, V, T> {
+}
+
+impl<K: Clone, V: Clone, T> Clone for SplitMap<K, V, T> {
+    fn clone(&self) -> Self {
+        Self { the_x: self.the_x.clone(), the_v: self.the_v.clone(), bot: self.bot.clone(), d: self.d.clone() }
+    }
 }
 
 pub struct SplitMapIterator<V> { p: PhantomData<V>}

@@ -5,18 +5,7 @@ use near_sdk::{
 };
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount},
-    asset_op,
-    borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
-    chunked_append_only_list::ChunkedAppendOnlyList,
-    event::MarketEvent,
-    market::{MarketConfiguration, WithdrawalResolution},
-    number::Decimal,
-    snapshot::Snapshot,
-    static_yield::StaticYieldRecord,
-    supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
-    withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue},
-    models,
+    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef}, chunked_append_only_list::ChunkedAppendOnlyList, event::MarketEvent, market::{MarketConfiguration, WithdrawalResolution}, models::{self, templar_nondet::{declare_nondet, TemplarNondet}}, number::Decimal, snapshot::Snapshot, static_yield::StaticYieldRecord, supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef}, withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue}
 };
 
 #[derive(BorshStorageKey)]
@@ -31,7 +20,7 @@ enum StorageKey {
 
 #[near]
 pub struct Market {
-    prefix: Vec<u8>,
+    pub(crate) prefix: Vec<u8>,
     pub configuration: MarketConfiguration,
     /// Total amount of borrow asset earning interest in the market.
     pub borrow_asset_deposited_active: BorrowAssetAmount,
@@ -54,6 +43,25 @@ pub struct Market {
     pub withdrawal_queue: WithdrawalQueue,
     pub static_yield: models::lookup_map::LookupMap<AccountId, StaticYieldRecord>,
 }
+
+declare_nondet!(
+    Market,
+    Market {
+        prefix: vec![1, 2, 3], // todo,
+        configuration: TemplarNondet::nondet(),
+        borrow_asset_deposited_active: TemplarNondet::nondet(),
+        borrow_asset_deposited_incoming: TemplarNondet::nondet(),
+        borrow_asset_in_flight: TemplarNondet::nondet(),
+        borrow_asset_borrowed: TemplarNondet::nondet(),
+        collateral_asset_deposited: TemplarNondet::nondet(),
+        supply_positions: TemplarNondet::nondet(),
+        borrow_positions: TemplarNondet::nondet(),
+        current_snapshot: TemplarNondet::nondet(),
+        finalized_snapshots: TemplarNondet::nondet(),
+        withdrawal_queue: TemplarNondet::nondet(),
+        static_yield: TemplarNondet::nondet(),
+    }
+);
 
 impl Market {
     pub fn new(prefix: impl IntoStorageKey, configuration: MarketConfiguration) -> Self {

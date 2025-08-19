@@ -24,6 +24,8 @@ use near_sdk::{
     near,
 };
 
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
+
 pub type OracleResponse = HashMap<PriceIdentifier, Option<Price>>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -34,6 +36,10 @@ pub struct PriceIdentifier(
         deserialize_with = "hex::serde::deserialize"
     )]
     pub [u8; 32],
+);
+
+declare_nondet!(
+    PriceIdentifier, arr => PriceIdentifier(arr)
 );
 
 impl Display for PriceIdentifier {

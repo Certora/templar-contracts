@@ -9,7 +9,7 @@ use near_sdk::{
     AccountId, Gas, NearToken, Promise,
 };
 
-use crate::number::Decimal;
+use crate::{models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
@@ -21,6 +21,12 @@ pub struct FungibleAsset<T: AssetClass> {
     kind: FungibleAssetKind,
 }
 
+impl<T: AssetClass> TemplarNondet for FungibleAsset<T> {
+    fn nondet() -> Self {
+        FungibleAsset { discriminant: PhantomData, kind: TemplarNondet::nondet() }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
 enum FungibleAssetKind {
@@ -30,6 +36,14 @@ enum FungibleAssetKind {
         token_id: String,
     },
 }
+
+declare_nondet!(
+    FungibleAssetKind,
+    match u8::nondet() {
+        0 => Self::Nep141(AccountId::nondet()),
+        _ => Self::Nep245 { contract_id: AccountId::nondet(), token_id: String::from("asdf") }
+    }
+);
 
 impl<T: AssetClass> FungibleAsset<T> {
     /// Really depends on the implementation, but this should suffice, since
@@ -185,7 +199,7 @@ pub struct FungibleAssetAmount<T: AssetClass> {
     discriminant: PhantomData<T>,
 }
 
-impl <T: AssetClass> cvlr::nondet::Nondet for FungibleAssetAmount<T> {
+impl <T: AssetClass> TemplarNondet for FungibleAssetAmount<T> {
     fn nondet() -> Self {
         Self {
             amount: U128(cvlr::nondet()),

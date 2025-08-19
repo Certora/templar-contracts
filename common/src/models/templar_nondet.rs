@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{num::{NonZeroU16, NonZeroU32}, str::FromStr};
 
 use near_sdk::{json_types::U128, AccountId};
 
@@ -42,6 +42,7 @@ macro_rules! make_project_nondet_ {
                     }
                 };
             }
+        pub(crate) use declare_nondet;
     };
 }
 
@@ -62,8 +63,53 @@ declare_nondet!(from_nondet, i16);
 declare_nondet!(from_nondet, i32);
 declare_nondet!(from_nondet, i128);
 declare_nondet!(from_nondet, bool);
-declare_nondet!(from_nondet, FungibleAssetAmount<BorrowAsset>);
-declare_nondet!(from_nondet, FungibleAssetAmount<CollateralAsset>);
+declare_nondet!(
+    [u8; 32],
+    {
+        let mut whole = [0u8; 32];
+        let (first, second) = whole.split_at_mut(16);
+        first.copy_from_slice(&u128::nondet().to_le_bytes());
+        second.copy_from_slice(&u128::nondet().to_le_bytes());
+        whole
+    }
+);
+declare_nondet!(
+    [u64; 8],
+    {
+        let mut whole = [0u64; 8];
+        unsafe {
+            let a = std::ptr::from_ref(&u128::nondet());
+            let b = std::ptr::from_ref(&u128::nondet());
+            let c = std::ptr::from_ref(&u128::nondet());
+            let d = std::ptr::from_ref(&u128::nondet());
+            let pwhole: *mut u128 = whole.as_mut_ptr().cast();
+            std::ptr::copy_nonoverlapping(
+                a, 
+                pwhole, 
+                1,
+            ); 
+            std::ptr::copy_nonoverlapping(
+                b, 
+                pwhole.offset(1),
+                1,
+            ); 
+            std::ptr::copy_nonoverlapping(
+                c, 
+                pwhole.offset(2),
+                1,
+            ); 
+            std::ptr::copy_nonoverlapping(
+                d, 
+                pwhole.offset(3),
+                1,
+            ); 
+        }
+        whole
+    }
+);
+declare_nondet!(primitive_types::U512, primitive_types::U512(TemplarNondet::nondet()));
+// declare_nondet!(from_nondet, FungibleAssetAmount<BorrowAsset>);
+// declare_nondet!(from_nondet, FungibleAssetAmount<CollateralAsset>);
 declare_nondet!(
     Accumulator<BorrowAsset>,
     total,
@@ -115,6 +161,26 @@ declare_nondet!(
     collateral_asset, borrow_asset =>
     StaticYieldRecord { collateral_asset, borrow_asset }
 );
+
+
+declare_nondet!(
+    NonZeroU16,
+    {
+        let x = u16::nondet();
+        cvlr::cvlr_assume!(x != 0);
+        unsafe { NonZeroU16::new_unchecked(x) }
+    }
+);
+
+declare_nondet!(
+    NonZeroU32,
+    {
+        let x = u32::nondet();
+        cvlr::cvlr_assume!(x != 0);
+        unsafe { NonZeroU32::new_unchecked(x) }
+    }
+);
+
 
 pub trait LiftOption {
     fn nondet_option(&self) -> Option<&Self> {

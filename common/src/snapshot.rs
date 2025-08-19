@@ -1,11 +1,7 @@
 use near_sdk::{env, json_types::U64, near};
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount},
-    asset_op,
-    interest_rate_strategy::InterestRateStrategy,
-    number::Decimal,
-    time_chunk::TimeChunk,
+    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, interest_rate_strategy::InterestRateStrategy, models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal, time_chunk::TimeChunk
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -20,6 +16,20 @@ pub struct Snapshot {
     yield_distribution: BorrowAssetAmount,
     interest_rate: Decimal,
 }
+
+declare_nondet!(
+    Snapshot,
+    Snapshot {
+        time_chunk: TimeChunk(U64::nondet()),
+        end_timestamp_ms: U64::nondet(),
+        borrow_asset_deposited_active: BorrowAssetAmount::nondet(),
+        borrow_asset_deposited_incoming: BorrowAssetAmount::nondet(),
+        borrow_asset_borrowed: BorrowAssetAmount::nondet(),
+        collateral_asset_deposited: CollateralAssetAmount::nondet(),
+        yield_distribution: BorrowAssetAmount::nondet(),
+        interest_rate: Decimal::nondet()
+    }
+);
 
 impl Snapshot {
     pub fn new(time_chunk: TimeChunk) -> Self {

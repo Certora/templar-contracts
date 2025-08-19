@@ -10,6 +10,16 @@ pub struct LookupMap<K: BorshSerialize + BorshDeserialize, V: BorshSerialize + B
     SplitMap<K,V,near_sdk::collections::LookupMap<K,V>>
 );
 
+impl<K,V> TemplarNondet for LookupMap<K, V> 
+where 
+    K: TemplarNondet + BorshSerialize + BorshDeserialize, 
+    V: TemplarNondet + BorshSerialize + BorshDeserialize
+{
+    fn nondet() -> Self {
+        LookupMap(TemplarNondet::nondet())
+    }
+}
+
 pub struct Iter<'a, K: 'a, V: 'a>(PhantomData<&'a (K, V)>);
 
 impl<K, V> Default for Iter<'_, K, V> {
@@ -37,6 +47,14 @@ where
 {
     pub fn new(prefix: std::vec::Vec<u8>) -> Self {
         LookupMap(SplitMap::new(near_sdk::collections::LookupMap::new(prefix)))
+    }
+
+    pub fn contains_key(&self, k: &K) -> bool {
+        if self.0.the_x == *k {
+            self.0.the_v.is_some()
+        } else { 
+            bool::nondet()
+        }
     }
 
     pub fn iter(&self) -> Iter<'_, K, V> {

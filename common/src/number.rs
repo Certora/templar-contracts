@@ -11,6 +11,8 @@ use near_sdk::{
 use primitive_types::U512;
 use schemars::JsonSchema;
 
+use crate::models::templar_nondet::*;
+
 pub const FRACTIONAL_BITS: usize = 128;
 /// `floor(FRACTIONAL_BITS / log2(10))`
 pub const FRACTIONAL_DECIMAL_DIGITS: usize = 38;
@@ -44,6 +46,10 @@ macro_rules! dec {
 pub struct Decimal {
     repr: U512,
 }
+
+declare_nondet!(
+    Decimal, repr => Decimal { repr }
+);
 
 impl Default for Decimal {
     fn default() -> Self {

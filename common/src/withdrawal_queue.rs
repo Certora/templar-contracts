@@ -1,10 +1,12 @@
 use std::num::NonZeroU32;
 
-use near_sdk::{collections::LookupMap, env, near, AccountId, BorshStorageKey, IntoStorageKey};
+use near_sdk::{env, near, AccountId, BorshStorageKey, IntoStorageKey};
 
+use crate::models;
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 use crate::{asset::BorrowAssetAmount, asset_op};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers = [borsh])]
 pub struct QueueNode {
     account_id: AccountId,
@@ -13,18 +15,42 @@ pub struct QueueNode {
     next: Option<NonZeroU32>,
 }
 
-#[derive(Debug)]
+declare_nondet!(
+    QueueNode,
+    QueueNode {
+        account_id: AccountId::nondet(),
+        amount: BorrowAssetAmount::nondet(),
+        prev: TemplarNondet::nondet(),
+        next: TemplarNondet::nondet(),
+    }
+);
+
+//#[derive(Debug)]
 #[near(serializers = [borsh])]
 pub struct WithdrawalQueue {
-    prefix: Vec<u8>,
+    prefix: models::vec::Vec<u8>,
     length: u32,
     is_locked: bool,
     next_queue_node_id: NonZeroU32,
-    queue: LookupMap<NonZeroU32, QueueNode>,
+    queue: models::lookup_map::LookupMap<NonZeroU32, QueueNode>,
     queue_head: Option<NonZeroU32>,
     queue_tail: Option<NonZeroU32>,
-    entries: LookupMap<AccountId, NonZeroU32>,
+    entries: models::lookup_map::LookupMap<AccountId, NonZeroU32>,
 }
+
+declare_nondet!(
+    WithdrawalQueue,
+    WithdrawalQueue { 
+        prefix: TemplarNondet::nondet(), 
+        length: TemplarNondet::nondet(), 
+        is_locked: TemplarNondet::nondet(), 
+        next_queue_node_id: TemplarNondet::nondet(), 
+        queue: TemplarNondet::nondet(), 
+        queue_head: TemplarNondet::nondet(), 
+        queue_tail: TemplarNondet::nondet(), 
+        entries: TemplarNondet::nondet() 
+    }
+);
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -42,14 +68,14 @@ impl WithdrawalQueue {
             };
         }
         Self {
-            prefix: prefix.clone(),
+            prefix: models::vec::Vec::new(prefix.clone()),
             length: 0,
             is_locked: false,
             next_queue_node_id: NonZeroU32::MIN,
-            queue: LookupMap::new(key!(Queue)),
+            queue: models::lookup_map::LookupMap::new(key!(Queue)),
             queue_head: None,
             queue_tail: None,
-            entries: LookupMap::new(key!(Entries)),
+            entries: models::lookup_map::LookupMap::new(key!(Entries)),
         }
     }
 

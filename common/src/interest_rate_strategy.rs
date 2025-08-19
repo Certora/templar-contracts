@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use near_sdk::{near, require};
 
-use crate::number::Decimal;
+use crate::{models::templar_nondet::*, number::Decimal};
 
 pub trait UsageCurve {
     fn at(&self, usage_ratio: Decimal) -> Decimal;
@@ -15,6 +15,27 @@ pub enum InterestRateStrategy {
     Piecewise(Piecewise),
     Exponential2(Exponential2),
 }
+
+declare_nondet!(
+    InterestRateStrategy,
+    match u8::nondet() {
+        0 => Self::Linear(
+            Linear { 
+                base : Decimal::nondet(),
+                top : Decimal::nondet(),
+            }
+        ),
+        1 => Self::Piecewise(
+            Piecewise { params: TemplarNondet::nondet(), i_negative_rate_2_b: TemplarNondet::nondet() }
+        ),
+        _ => Self::Exponential2(
+            Exponential2 {
+                params: TemplarNondet::nondet(),
+                i_factor: TemplarNondet::nondet(),
+            }
+        )
+    }
+);
 
 impl InterestRateStrategy {
     pub const fn zero() -> Self {
@@ -145,6 +166,11 @@ pub struct PiecewiseParams {
     rate_2: Decimal,
 }
 
+declare_nondet!(
+    PiecewiseParams,
+    base, optimal, rate_1, rate_2 => PiecewiseParams { base, optimal, rate_1, rate_2 }
+);
+
 impl TryFrom<PiecewiseParams> for Piecewise {
     type Error = &'static str;
 
@@ -221,6 +247,12 @@ pub struct Exponential2Params {
     top: Decimal,
     eccentricity: Decimal,
 }
+
+declare_nondet!(
+    Exponential2Params,
+    base, top, eccentricity => 
+    Exponential2Params { base, top, eccentricity }
+);
 
 impl TryFrom<Exponential2Params> for Exponential2 {
     type Error = &'static str;

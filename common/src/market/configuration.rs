@@ -3,16 +3,11 @@ use std::{io::ErrorKind, ops::Deref};
 use near_sdk::{borsh, json_types::U64, near, AccountId};
 
 use crate::{
+    models::templar_nondet::*,
     asset::{
         AssetClass, BorrowAsset, BorrowAssetAmount, CollateralAsset, CollateralAssetAmount,
         FungibleAsset, FungibleAssetAmount,
-    },
-    borrow::{BorrowPosition, BorrowStatus, LiquidationReason},
-    fee::{Fee, TimeBasedFee},
-    interest_rate_strategy::InterestRateStrategy,
-    number::Decimal,
-    price::{PricePair, Valuation},
-    time_chunk::TimeChunkConfiguration,
+    }, borrow::{BorrowPosition, BorrowStatus, LiquidationReason}, fee::{Fee, TimeBasedFee}, interest_rate_strategy::InterestRateStrategy, market::Market, models::templar_nondet::declare_nondet, number::Decimal, price::{PricePair, Valuation}, time_chunk::TimeChunkConfiguration
 };
 
 use super::{PriceOracleConfiguration, YieldWeights};
@@ -27,6 +22,12 @@ pub const APY_LIMIT: u128 = 100_000;
 pub struct ValidAmountRange<A: AssetClass + PartialOrd>(
     #[borsh(deserialize_with = "deserialize_valid_amount_range")] AmountRange<A>,
 );
+
+impl <A: AssetClass + PartialOrd> TemplarNondet for ValidAmountRange<A>  {
+    fn nondet() -> Self {
+        Self(AmountRange { minimum: TemplarNondet::nondet(), maximum: TemplarNondet::nondet() })
+    }
+}
 
 fn deserialize_valid_amount_range<
     R: borsh::io::Read,
@@ -137,6 +138,45 @@ pub struct MarketConfiguration {
     /// $110 * 1% = $1.1 of NEAR.
     pub liquidation_maximum_spread: Decimal,
 }
+
+declare_nondet!(
+    MarketConfiguration,
+    time_chunk_configuration,
+    borrow_asset,
+    collateral_asset,
+    price_oracle_configuration,
+    borrow_mcr_maintenance,
+    borrow_mcr_liquidation,
+    borrow_asset_maximum_usage_ratio,
+    borrow_origination_fee,
+    borrow_interest_rate_strategy,
+    borrow_maximum_duration_ms,
+    borrow_range,
+    supply_range,
+    supply_withdrawal_range,
+    supply_withdrawal_fee,
+    yield_weights,
+    protocol_account_id,
+    liquidation_maximum_spread => MarketConfiguration {
+    time_chunk_configuration,
+    borrow_asset,
+    collateral_asset,
+    price_oracle_configuration,
+    borrow_mcr_maintenance,
+    borrow_mcr_liquidation,
+    borrow_asset_maximum_usage_ratio,
+    borrow_origination_fee,
+    borrow_interest_rate_strategy,
+    borrow_maximum_duration_ms,
+    borrow_range,
+    supply_range,
+    supply_withdrawal_range,
+    supply_withdrawal_fee,
+    yield_weights,
+    protocol_account_id,
+    liquidation_maximum_spread
+    }
+);
 
 pub mod error {
     use std::fmt::Display;

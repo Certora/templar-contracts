@@ -1,4 +1,5 @@
 use near_sdk::{env, json_types::U64, near};
+use crate::models::templar_nondet::*;
 
 /// Configure a method of determining the current time chunk.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -8,6 +9,15 @@ pub enum TimeChunkConfiguration {
     EpochHeight { divisor: U64 },
     BlockTimestampMs { divisor: U64 },
 }
+
+declare_nondet!(
+    TimeChunkConfiguration,
+    match u8::nondet() {
+        0 => TimeChunkConfiguration::BlockHeight { divisor: TemplarNondet::nondet() },
+        1 => TimeChunkConfiguration::EpochHeight { divisor: TemplarNondet::nondet() },
+        _ => TimeChunkConfiguration::BlockTimestampMs { divisor: TemplarNondet::nondet() },
+    }
+);
 
 impl TimeChunkConfiguration {
     pub fn now(&self) -> TimeChunk {

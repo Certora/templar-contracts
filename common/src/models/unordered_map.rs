@@ -10,6 +10,12 @@ pub struct UnorderedMap<K: BorshSerialize + BorshDeserialize, V: BorshSerialize 
     SplitMap<K,V,near_sdk::collections::UnorderedMap<K,V>>
 );
 
+impl<K: BorshSerialize + BorshDeserialize + TemplarNondet, V: BorshSerialize + BorshDeserialize + TemplarNondet> TemplarNondet for UnorderedMap<K, V> {
+    fn nondet() -> Self {
+        UnorderedMap(TemplarNondet::nondet())
+    }
+}
+
 pub struct Iter<'a, K: 'a, V: 'a>(PhantomData<&'a (K, V)>);
 
 impl<K, V> Default for Iter<'_, K, V> {

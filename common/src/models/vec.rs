@@ -21,6 +21,10 @@ impl <V> Vec<V>
 where
     V: TemplarNondet + Clone
 {
+    pub fn new(v: std::vec::Vec<V>) -> Self {
+        Vec(SplitMap::new(v))
+    }
+
     pub fn iter(&self) -> VecIter<'_, V> {
         VecIter { p: PhantomData }
     }

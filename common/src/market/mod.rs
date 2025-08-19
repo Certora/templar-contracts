@@ -3,7 +3,7 @@ use std::num::NonZeroU16;
 
 use near_sdk::{env, near, AccountId};
 
-use crate::{asset::BorrowAssetAmount, models, number::Decimal};
+use crate::{asset::BorrowAssetAmount, models::{self, templar_nondet::{declare_nondet, TemplarNondet}}, number::Decimal};
 mod configuration;
 pub use configuration::{MarketConfiguration, APY_LIMIT};
 mod external;
@@ -31,8 +31,12 @@ pub struct BorrowAssetMetrics {
 #[near(serializers = [json, borsh])]
 pub struct YieldWeights {
     pub supply: NonZeroU16,
-    pub r#static: HashMap<AccountId, u16>,
+    pub r#static: models::hash_map::HashMap<AccountId, u16>,
 }
+
+declare_nondet!(YieldWeights,
+    supply, r#static => YieldWeights { supply, r#static }
+);
 
 impl YieldWeights {
     /// # Panics
@@ -41,7 +45,7 @@ impl YieldWeights {
     pub fn new_with_supply_weight(supply: u16) -> Self {
         Self {
             supply: supply.try_into().unwrap(),
-            r#static: HashMap::new(),
+            r#static: models::hash_map::HashMap::new(std::collections::HashMap::new()),
         }
     }
 

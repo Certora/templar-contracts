@@ -11,6 +11,7 @@ use near_sdk::near;
 use cvlr::{cvlr_satisfy, rule};
 use cvlr::cvlr_assert;
 use near_sdk::AccountId;
+use templar_common::market::Market;
 use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 
@@ -28,6 +29,25 @@ pub fn split_ok_1() {
     let v2 = m.get(&j);
     v2.map(|the_val| cvlr_satisfy!(*the_val == v));
     v2.map(|the_val| cvlr_satisfy!(*the_val != v));
+}
+
+#[rule]
+pub fn record_borrow_asset_protocol_yield_intergity() {
+	let amount = TemplarNondet::nondet(); //wrap to type BorrowAssetAmount
+	let mut market = Market::nondet(); //nondet Market, mutable
+	let protocol_id = market.configuration.protocol_account_id.clone();
+	let yield_borrow_asset_protocol_pre = 
+        market.static_yield
+            .get(&protocol_id)
+            .unwrap_or_default()
+            .borrow_asset;
+            
+    market.record_borrow_asset_protocol_yield(amount);
+  
+	let yield_borrow_asset_protocol_post = market.static_yield
+          .get(&protocol_id).unwrap_or_default().borrow_asset;
+
+ 	cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + 1 + u128::from(amount));
 }
 
 // #[near(serializers=[])]
