@@ -2,7 +2,7 @@ use std::{cell::RefCell, marker::PhantomData};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::{near, IntoStorageKey};
-use cvlr::cvlr_assert;
+use cvlr::{cvlr_assert, nondet};
 
 use crate::models::{split_map::SplitMap, templar_nondet::*};
 
@@ -63,12 +63,11 @@ where
     }
 
     pub fn last_mut(&mut self) -> Option<&mut V> {
-        // ABAKST can these be ITEs?
-        match u8::nondet() {
-            0 => self.0.the_v.as_mut(),
-            1 => self.0.bot.get_mut().nondet_option_mut(),
-            _ => None
-        }
+        nondet_choice!(
+           self.0.the_v.as_mut(),
+           self.0.bot.get_mut().nondet_option_mut(),
+           None
+        )
     }
 
     pub fn len(&self) -> u32 {
@@ -80,23 +79,23 @@ where
     }
 
     pub fn push(&mut self, v: V) {
-        match u8::nondet() {
-            0 => self.0.the_v = Some(v),
-            1 => { self.0.bot.replace(TemplarNondet::nondet()); },
-            _ => {}
-        }
+        nondet_choice!(
+            self.0.the_v = Some(v),
+            { self.0.bot.replace(TemplarNondet::nondet()); },
+            {}
+        );
     }
     pub fn pop(&mut self) -> Option<V> {
-        match u8::nondet() {
-            0 => { 
+        nondet_choice!(
+            { 
                 let v = self.0.the_v.clone();
                 self.0.the_v = None;
                 v
             },
-            _ => { 
+            { 
                 TemplarNondet::nondet()
-            },
-        }
+            }
+        )
     }
 }
 

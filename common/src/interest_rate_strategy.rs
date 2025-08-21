@@ -18,21 +18,24 @@ pub enum InterestRateStrategy {
 
 declare_nondet!(
     InterestRateStrategy,
-    match u8::nondet() {
-        0 => Self::Linear(
-            Linear { 
-                base : Decimal::nondet(),
-                top : Decimal::nondet(),
-            }
-        ),
-        1 => Self::Piecewise(
-            Piecewise { params: TemplarNondet::nondet(), i_negative_rate_2_b: TemplarNondet::nondet() }
-        ),
-        _ => Self::Exponential2(
-            Exponential2 {
-                params: TemplarNondet::nondet(),
-                i_factor: TemplarNondet::nondet(),
-            }
+    {
+        let d = u8::nondet();
+        nondet_choice!(
+            Self::Linear(
+                Linear { 
+                    base : Decimal::nondet(),
+                    top : Decimal::nondet(),
+                }
+            ),
+            Self::Piecewise(
+                Piecewise { params: TemplarNondet::nondet(), i_negative_rate_2_b: TemplarNondet::nondet() }
+            ),
+            Self::Exponential2(
+                Exponential2 {
+                    params: TemplarNondet::nondet(),
+                    i_factor: TemplarNondet::nondet(),
+                }
+            )
         )
     }
 );

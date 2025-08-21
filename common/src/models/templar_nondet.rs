@@ -1,8 +1,24 @@
-use std::{num::{NonZeroU16, NonZeroU32}, str::FromStr};
+use std::{alloc::GlobalAlloc, io::Read, num::{NonZeroU16, NonZeroU32}, str::{from_utf8_unchecked, FromStr}};
 
+use cvlr::cvlr_assume;
 use near_sdk::{json_types::U128, AccountId};
 
 use crate::{accumulator::Accumulator, asset::{BorrowAsset, CollateralAsset, FungibleAssetAmount}, borrow::BorrowPosition, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}};
+
+#[inline(never)]
+pub fn certora_ite<E>(b: bool, tt: E, ff: E) -> E {
+    if b { tt } else { ff }
+}
+
+pub fn certora_choose<E>(tt: E, ff: E) -> E {
+    if bool::nondet() { tt } else { ff }
+}
+
+macro_rules! nondet_choice {
+    ($e1:expr) => { $e1 };
+    ($e1:expr, $( $e:expr ),*) => { crate::models::templar_nondet::certora_choose($e1, nondet_choice!($( $e ),*)) };
+}
+pub(crate) use nondet_choice;
 
 // Abakst: move these to CVLR?
 macro_rules! make_project_nondet_ {
@@ -22,7 +38,7 @@ macro_rules! make_project_nondet_ {
                 (option) => {
                     impl <T:$name> $name for Option<T> {
                         fn nondet() -> Self {
-                            if bool::nondet() { None } else { Some(T::nondet()) }
+                            certora_choose(None, Some(T::nondet()))
                         }
                     }
                 };
@@ -121,7 +137,13 @@ declare_nondet!(
 );
 declare_nondet!(IncomingDeposit, amount, activate_at_snapshot_index => IncomingDeposit { amount, activate_at_snapshot_index });
 declare_nondet!(option);
-declare_nondet!(AccountId, FromStr::from_str("nondet").unwrap());
+// declare_nondet!(AccountId, 
+//     {
+//         let foo = Box<String::from("asdf").into_boxed_str()>;
+
+//     }
+// //    FromStr::from_str("nondet").unwrap()
+// );
 declare_nondet!(near_sdk::json_types::U64, x => near_sdk::json_types::U64(x));
 
 declare_nondet!(U128, y => U128(y));
@@ -181,13 +203,48 @@ declare_nondet!(
     }
 );
 
+fn nondet_bytes_sz(sz: usize) -> String {
+    unsafe {
+        let bytes = CERTORA_nondet_bytes(sz as u32);
+        String::from_raw_parts(bytes, sz, sz)
+    }
+}
+
+
+impl TemplarNondet for Box<str> {
+    #[inline(never)]
+    fn nondet() -> Self {
+        // let sz = usize::nondet();
+        // cvlr_assume!(AccountId::MIN_LEN <= sz && sz <= AccountId::MAX_LEN);
+        let sz = 2;
+        let s = nondet_bytes_sz(sz);
+        id(s.into_boxed_str())
+    }
+}
+
+#[inline(never)]
+fn id<A>(a: A) -> A { a }
+
+impl TemplarNondet for AccountId {
+    #[inline(never)]
+    fn nondet() -> Self {
+        unsafe {
+            let bstr = Box::<str>::nondet();
+            std::mem::transmute(bstr)
+        }
+    }
+}
+
+unsafe extern "C" {
+    pub unsafe fn CERTORA_nondet_bytes(n: u32) -> *mut u8;
+}
 
 pub trait LiftOption {
     fn nondet_option(&self) -> Option<&Self> {
-        if bool::nondet() { None } else { Some(self) }
+        certora_choose(None, Some(self) )
     }
     fn nondet_option_mut(&mut self) -> Option<&mut Self> {
-        if bool::nondet() { None } else { Some(self) }
+        certora_choose(None, Some(self) )
     }
 }
 

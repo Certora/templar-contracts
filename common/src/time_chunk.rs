@@ -12,10 +12,12 @@ pub enum TimeChunkConfiguration {
 
 declare_nondet!(
     TimeChunkConfiguration,
-    match u8::nondet() {
-        0 => TimeChunkConfiguration::BlockHeight { divisor: TemplarNondet::nondet() },
-        1 => TimeChunkConfiguration::EpochHeight { divisor: TemplarNondet::nondet() },
-        _ => TimeChunkConfiguration::BlockTimestampMs { divisor: TemplarNondet::nondet() },
+    {
+        nondet_choice!(
+            TimeChunkConfiguration::BlockHeight { divisor: TemplarNondet::nondet() },
+            TimeChunkConfiguration::EpochHeight { divisor: TemplarNondet::nondet() },
+            TimeChunkConfiguration::BlockTimestampMs { divisor: TemplarNondet::nondet() }
+        )
     }
 );
 

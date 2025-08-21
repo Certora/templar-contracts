@@ -9,7 +9,7 @@ use near_sdk::{
     AccountId, Gas, NearToken, Promise,
 };
 
-use crate::{models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal};
+use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}, number::Decimal};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
@@ -39,10 +39,10 @@ enum FungibleAssetKind {
 
 declare_nondet!(
     FungibleAssetKind,
-    match u8::nondet() {
-        0 => Self::Nep141(AccountId::nondet()),
-        _ => Self::Nep245 { contract_id: AccountId::nondet(), token_id: String::from("asdf") }
-    }
+    nondet_choice!(
+        Self::Nep141(AccountId::nondet()),
+        Self::Nep245 { contract_id: AccountId::nondet(), token_id: String::from("asdf") }
+    )
 );
 
 impl<T: AssetClass> FungibleAsset<T> {

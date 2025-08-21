@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use borsh::{BorshDeserialize, BorshSerialize};
+use cvlr::cvlr_assert;
 use near_sdk::near;
 
 use crate::models::{split_map::SplitMap, templar_nondet::*};
@@ -49,6 +50,10 @@ where
         LookupMap(SplitMap::new(near_sdk::collections::LookupMap::new(prefix)))
     }
 
+    pub fn focus(&mut self, k: K) {
+        self.0.split(k);
+    }
+
     pub fn contains_key(&self, k: &K) -> bool {
         if self.0.the_x == *k {
             self.0.the_v.is_some()
@@ -61,15 +66,19 @@ where
         Iter::default()
     }
 
-    pub fn get(&self, _k: &K) -> Option<V> {
-        TemplarNondet::nondet()
+    pub fn get(&self, k: &K) -> Option<V> {
+        if self.0.the_x == *k {
+            self.0.the_v.clone()
+        } else {
+            TemplarNondet::nondet()
+        }
     }
 
     pub fn remove(&mut self, _k: &K) -> Option<V> {
         TemplarNondet::nondet()
     }
 
-    pub fn insert(&mut self, _k: &K, _v: &V) {
-
+    pub fn insert(&mut self, k: &K, v: &V) {
+        self.0.insert(k, v);
     }
 }
