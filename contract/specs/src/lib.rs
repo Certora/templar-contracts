@@ -12,9 +12,11 @@ use near_sdk::near;
 use cvlr::{cvlr_satisfy, rule};
 use cvlr::cvlr_assert;
 use near_sdk::AccountId;
-use templar_common::market::Market;
+use templar_common::asset::{BorrowAsset, BorrowAssetAmount};
+use templar_common::market::{Market, MarketConfiguration};
 use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
+use templar_common::snapshot::Snapshot;
 
 #[rule]
 pub fn split_ok_1() {
@@ -55,16 +57,16 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
 	let mut market = Market::nondet(); //nondet Market, mutable
 	let protocol_id = market.configuration.protocol_account_id.clone();
     market.static_yield.focus(protocol_id.clone());
-	let yield_borrow_asset_protocol_pre = 
-        market.static_yield
-            .get(&protocol_id)
-            .unwrap_or_default()
-            .borrow_asset;
+	// let yield_borrow_asset_protocol_pre = 
+    //     market.static_yield
+    //         .get(&protocol_id)
+    //         .unwrap_or_default()
+    //         .borrow_asset;
             
     market.record_borrow_asset_protocol_yield(amount);
   
-	let yield_borrow_asset_protocol_post = market.static_yield
-          .get(&protocol_id).unwrap_or_default().borrow_asset;
+	// let yield_borrow_asset_protocol_post = market.static_yield
+    //       .get(&protocol_id).unwrap_or_default().borrow_asset;
 
     cvlr_satisfy!(true);
  	//cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));

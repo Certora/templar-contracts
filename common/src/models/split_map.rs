@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, cell::RefCell, marker::PhantomData};
+use std::{borrow::Borrow, cell::RefCell, marker::PhantomData, ops::Deref};
 use near_sdk::near;
 use crate::models::templar_nondet::*;
 
@@ -48,7 +48,7 @@ impl <V:TemplarNondet> std::iter::Iterator for SplitMapIterator<V> {
     type Item = V;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if bool::nondet() { None } else { Some(V::nondet())}
+        nondet_choice!(None, Some(V::nondet()))
     }
 }
 impl <K, V:TemplarNondet, T> std::iter::IntoIterator for &SplitMap<K, V, T> {
@@ -100,23 +100,15 @@ where
 {
     pub fn split(&mut self, the_k: K) {
         self.the_x = the_k;
-        self.the_v = if cvlr::nondet::<u8>() == 0 {
-            None
-        } else {
-            Some(V::nondet())
-        }
+        self.the_v = nondet_choice!(None, Some(V::nondet()));
     }
 
     pub fn nondet_v(&self) -> Option<&V> {
-        if cvlr::nondet::<u8>() == 0 {
-            None
-        } else {
-            let r = self.bot.as_ptr();
-            unsafe { 
-                *r = V::nondet();
-                let p: &V = &*r;
-                p.nondet_option()
-            }
+        let v = V::nondet();
+        let ptr = self.bot.as_ptr();
+        unsafe { 
+            *ptr = v; 
+            (&*self.bot.as_ptr()).nondet_option()
         }
     }
 

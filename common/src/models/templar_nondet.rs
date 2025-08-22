@@ -94,30 +94,12 @@ declare_nondet!(
     {
         let mut whole = [0u64; 8];
         unsafe {
-            let a = std::ptr::from_ref(&u128::nondet());
-            let b = std::ptr::from_ref(&u128::nondet());
-            let c = std::ptr::from_ref(&u128::nondet());
-            let d = std::ptr::from_ref(&u128::nondet());
-            let pwhole: *mut u128 = whole.as_mut_ptr().cast();
+            let pwhole: *mut u8 = whole.as_mut_ptr().cast();
+            let bytes = CERTORA_nondet_bytes(64);
             std::ptr::copy_nonoverlapping(
-                a, 
+                bytes, 
                 pwhole, 
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                b, 
-                pwhole.offset(1),
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                c, 
-                pwhole.offset(2),
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                d, 
-                pwhole.offset(3),
-                1,
+                64,
             ); 
         }
         whole
@@ -203,7 +185,7 @@ declare_nondet!(
     }
 );
 
-fn nondet_bytes_sz(sz: usize) -> String {
+pub fn nondet_bytes_sz(sz: usize) -> String {
     unsafe {
         let bytes = CERTORA_nondet_bytes(sz as u32);
         String::from_raw_parts(bytes, sz, sz)
