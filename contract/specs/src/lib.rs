@@ -1,6 +1,7 @@
 use std::borrow::Borrow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
+use std::io::Read;
 use std::string::{FromUtf16Error, FromUtf8Error};
 
 use models::templar_nondet::*;
@@ -47,9 +48,45 @@ pub fn accounts_can_be_neq() {
     // let a1: AccountId = AccountId::nondet();
     // let a2: AccountId = a1.clone();
     let s = AccountId::nondet();
-    let t = AccountId::nondet();
-    cvlr_satisfy!(s != t);
+    let t = s.clone();
+    cvlr_assert!(!(s == t));
 }
+
+
+#[inline(never)]
+pub fn id<T>(t: T) -> T { t }
+
+// #[no_mangle]
+// pub fn unsafe_box_str_clone(b: &Box<str>) -> Box<str> {
+//     unsafe {
+//         let p = b.as_ptr();
+//         let bytes = CERTORA_nondet_bytes(b.len() as u32);
+//         std::ptr::copy(p, bytes, b.len());
+//         let new_s = nondet_bytes_sz(b.len());
+//         id(new_s.into_boxed_str())
+//     }
+// }
+
+#[no_mangle]
+#[inline(never)]
+pub fn unsafe_account_id_clone(a: &AccountId) -> AccountId {
+    unsafe {
+        let ai: u64 = std::mem::transmute(a.as_bytes());
+        std::mem::transmute(ai)
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn unsafe_account_id_eq(a: &AccountId, b: &AccountId) -> bool {
+    unsafe {
+        let ai: u64 = std::mem::transmute(a.as_bytes());
+        let bi: u64 = std::mem::transmute(b.as_bytes());
+        ai == bi
+    }
+}
+
+
 
 #[rule]
 pub fn record_borrow_asset_protocol_yield_intergity() {
@@ -57,19 +94,18 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
 	let mut market = Market::nondet(); //nondet Market, mutable
 	let protocol_id = market.configuration.protocol_account_id.clone();
     market.static_yield.focus(protocol_id.clone());
-	// let yield_borrow_asset_protocol_pre = 
-    //     market.static_yield
-    //         .get(&protocol_id)
-    //         .unwrap_or_default()
-    //         .borrow_asset;
+	let yield_borrow_asset_protocol_pre = 
+        market.static_yield
+            .get(&protocol_id)
+            .unwrap_or_default()
+            .borrow_asset;
             
     market.record_borrow_asset_protocol_yield(amount);
   
-	// let yield_borrow_asset_protocol_post = market.static_yield
-    //       .get(&protocol_id).unwrap_or_default().borrow_asset;
+	let yield_borrow_asset_protocol_post = market.static_yield
+          .get(&protocol_id).unwrap_or_default().borrow_asset;
 
-    cvlr_satisfy!(true);
- 	//cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));
+ 	cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + 1u128);
 }
 
 // #[near(serializers=[])]

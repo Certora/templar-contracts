@@ -1,6 +1,6 @@
 use std::{alloc::GlobalAlloc, io::Read, num::{NonZeroU16, NonZeroU32}, str::{from_utf8_unchecked, FromStr}};
 
-use cvlr::cvlr_assume;
+use cvlr::{cvlr_assume, nondet};
 use near_sdk::{json_types::U128, AccountId};
 
 use crate::{accumulator::Accumulator, asset::{BorrowAsset, CollateralAsset, FungibleAssetAmount}, borrow::BorrowPosition, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}};
@@ -10,7 +10,9 @@ pub fn certora_ite<E>(b: bool, tt: E, ff: E) -> E {
     if b { tt } else { ff }
 }
 
-pub fn certora_choose<E>(tt: E, ff: E) -> E {
+
+#[inline(never)]
+pub(crate) fn certora_choose<E>(tt: E, ff: E) -> E {
     if bool::nondet() { tt } else { ff }
 }
 
@@ -82,26 +84,28 @@ declare_nondet!(from_nondet, bool);
 declare_nondet!(
     [u8; 32],
     {
-        let mut whole = [0u8; 32];
-        let (first, second) = whole.split_at_mut(16);
-        first.copy_from_slice(&u128::nondet().to_le_bytes());
-        second.copy_from_slice(&u128::nondet().to_le_bytes());
-        whole
+        let mut whole = [0u64; 4];
+        whole[0] = TemplarNondet::nondet();
+        whole[1] = TemplarNondet::nondet();
+        whole[2] = TemplarNondet::nondet();
+        whole[3] = TemplarNondet::nondet();
+        unsafe { 
+            std::mem::transmute(whole)
+        }
     }
 );
 declare_nondet!(
     [u64; 8],
     {
         let mut whole = [0u64; 8];
-        unsafe {
-            let pwhole: *mut u8 = whole.as_mut_ptr().cast();
-            let bytes = CERTORA_nondet_bytes(64);
-            std::ptr::copy_nonoverlapping(
-                bytes, 
-                pwhole, 
-                64,
-            ); 
-        }
+        whole[0] = TemplarNondet::nondet();
+        whole[1] = TemplarNondet::nondet();
+        whole[2] = TemplarNondet::nondet();
+        whole[3] = TemplarNondet::nondet();
+        whole[4] = TemplarNondet::nondet();
+        whole[5] = TemplarNondet::nondet();
+        whole[6] = TemplarNondet::nondet();
+        whole[7] = TemplarNondet::nondet();
         whole
     }
 );
@@ -211,8 +215,8 @@ impl TemplarNondet for AccountId {
     #[inline(never)]
     fn nondet() -> Self {
         unsafe {
-            let bstr = Box::<str>::nondet();
-            std::mem::transmute(bstr)
+            let v = u64::nondet();
+            std::mem::transmute(v)
         }
     }
 }
