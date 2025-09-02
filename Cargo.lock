@@ -706,6 +706,80 @@ dependencies = [
 ]
 
 [[package]]
+name = "cvlr"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-early-panic",
+ "cvlr-hook",
+ "cvlr-log",
+ "cvlr-macros",
+ "cvlr-mathint",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-asserts"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+
+[[package]]
+name = "cvlr-early-panic"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.93",
+]
+
+[[package]]
+name = "cvlr-hook"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "quote",
+ "syn 2.0.93",
+]
+
+[[package]]
+name = "cvlr-log"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "cvlr-mathint",
+]
+
+[[package]]
+name = "cvlr-macros"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.93",
+]
+
+[[package]]
+name = "cvlr-mathint"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-nondet"
+version = "0.4.1"
+source = "git+https://github.com/Certora/cvlr.git#09342131bc2b85630759af503eab19cbca0bec20"
+dependencies = [
+ "cvlr-asserts",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3819,6 +3893,7 @@ name = "templar-common"
 version = "1.0.0"
 dependencies = [
  "borsh",
+ "cvlr",
  "hex",
  "near-contract-standards",
  "near-sdk",
@@ -3849,6 +3924,7 @@ dependencies = [
 name = "templar-market-contract"
 version = "1.0.0"
 dependencies = [
+ "cvlr",
  "getrandom",
  "near-contract-standards",
  "near-sdk",
@@ -3856,6 +3932,24 @@ dependencies = [
  "near-workspaces",
  "rstest",
  "templar-common",
+ "test-utils",
+ "tokio",
+]
+
+[[package]]
+name = "templar-market-specs"
+version = "1.0.0"
+dependencies = [
+ "borsh",
+ "cvlr",
+ "getrandom",
+ "near-contract-standards",
+ "near-sdk",
+ "near-sdk-contract-tools",
+ "near-workspaces",
+ "rstest",
+ "templar-common",
+ "templar-market-contract",
  "test-utils",
  "tokio",
 ]

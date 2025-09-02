@@ -461,7 +461,7 @@ impl<'a> BorrowPositionGuard<'a> {
             .unwrap_or_else(|| env::panic_str("Increase borrow asset principal overflow"));
 
         asset_op!(self.market.borrow_asset_borrowed += amount);
-        self.market.snapshot();
+        // self.market.snapshot();
 
         // MarketEvent::BorrowWithdrawn {
         //     account_id: self.account_id.clone(),

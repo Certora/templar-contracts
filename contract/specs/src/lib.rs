@@ -155,13 +155,9 @@ pub fn borrow_preserves_health() {
         .configuration
         .borrow_status(&borrow_position, &price_pair, block_ts);
 
-    // cvlr_assert!(heath_post.is_healthy());
+//  cvlr_assert!(heath_post.is_healthy());
     cvlr_assert!(false);
 }
-
-// loop_iter should be 1
-// accumutae_interest
-// snapshot
 
 
 // #[near(serializers=[])]
