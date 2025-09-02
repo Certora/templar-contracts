@@ -1,27 +1,15 @@
-use core::borrow;
-use std::borrow::Borrow;
-use std::cell::UnsafeCell;
-use std::collections::HashMap;
-use std::string::{FromUtf16Error, FromUtf8Error};
-
 use models::templar_nondet::*;
-use near_sdk::env::block_timestamp_ms;
-use near_sdk::json_types::{U128, U64};
-use near_sdk::near;
-use near_sdk::store::key::Identity;
-use near_sdk::store::LookupMap;
 
 use cvlr::{cvlr_assert, cvlr_assume};
 use cvlr::{cvlr_satisfy, rule};
 use near_sdk::AccountId;
+
 use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
 use templar_common::market::Market;
 use templar_common::models::split_map::ApplyRule;
-use templar_common::oracle::pyth::{OracleResponse, Price};
-use templar_common::price::PricePair;
-use templar_common::supply::{SupplyPositionGuard, YieldAccumulationProof};
-use templar_common::{models, supply};
+use templar_common::supply::{SupplyPositionGuard};
+use templar_common::{models};
 
 #[no_mangle]
 #[inline(never)]
@@ -95,9 +83,10 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
         .get(&protocol_id)
         .unwrap_or_default()
         .borrow_asset;
-
-    cvlr_satisfy!(true);
-    //cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));
+    cvlr_assert!(
+        u128::from(yield_borrow_asset_protocol_post)
+            == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount)
+    );
 }
 
 #[rule]
@@ -121,8 +110,7 @@ pub fn accumulate_interest_sanity() {
     let mut market = Market::nondet();
     let account_id = AccountId::nondet();
     let borrow_position = BorrowPosition::nondet();
-    let mut bp_guard =
-            BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone()); 
+    let mut bp_guard = BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone());
     bp_guard.accumulate_interest();
     cvlr_assert!(false);
 }
@@ -155,10 +143,9 @@ pub fn borrow_preserves_health() {
         .configuration
         .borrow_status(&borrow_position, &price_pair, block_ts);
 
-//  cvlr_assert!(heath_post.is_healthy());
+    //  cvlr_assert!(heath_post.is_healthy());
     cvlr_assert!(false);
 }
-
 
 // #[near(serializers=[])]
 // pub struct MyData {

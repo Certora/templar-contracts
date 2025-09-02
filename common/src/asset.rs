@@ -9,7 +9,7 @@ use near_sdk::{
     AccountId, Gas, NearToken, Promise,
 };
 
-use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}, number::Decimal};
+use crate::{models::templar_nondet::{declare_nondet, nondet_bytes_sz, nondet_choice, TemplarNondet}, number::Decimal};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
@@ -41,7 +41,7 @@ declare_nondet!(
     FungibleAssetKind,
     nondet_choice!(
         Self::Nep141(AccountId::nondet()),
-        Self::Nep245 { contract_id: AccountId::nondet(), token_id: String::from("asdf") }
+        Self::Nep245 { contract_id: AccountId::nondet(), token_id: nondet_bytes_sz(3) }
     )
 );
 

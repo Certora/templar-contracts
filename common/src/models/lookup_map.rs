@@ -67,11 +67,13 @@ where
     }
 
     pub fn get(&self, k: &K) -> Option<V> {
-        if self.0.the_x == *k {
-            self.0.the_v.clone()
-        } else {
-            TemplarNondet::nondet()
-        }
+        let have = self.0.the_v.clone();
+        let have_not = TemplarNondet::nondet();
+        if self.0.the_x == *k { have } else { have_not  }
+        //     self.0.the_v.clone()
+        // } else {
+        //     TemplarNondet::nondet()
+        // }
     }
 
     pub fn remove(&mut self, _k: &K) -> Option<V> {

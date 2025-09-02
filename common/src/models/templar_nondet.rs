@@ -199,7 +199,7 @@ declare_nondet!(NonZeroU32, {
     unsafe { NonZeroU32::new_unchecked(x) }
 });
 
-fn nondet_bytes_sz(sz: usize) -> String {
+pub fn nondet_bytes_sz(sz: usize) -> String {
     unsafe {
         let bytes = CERTORA_nondet_bytes(sz as u32);
         String::from_raw_parts(bytes, sz, sz)
