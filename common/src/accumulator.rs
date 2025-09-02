@@ -1,6 +1,6 @@
 use near_sdk::{json_types::U128, near, require};
 
-use crate::asset::{AssetClass, FungibleAssetAmount};
+use crate::{asset::{AssetClass, FungibleAssetAmount}, models::templar_nondet::{declare_nondet, TemplarNondet}};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
@@ -13,6 +13,7 @@ pub struct Accumulator<T: AssetClass> {
     pub pending_estimate: FungibleAssetAmount<T>,
     amortized: FungibleAssetAmount<T>,
 }
+
 
 impl<T: AssetClass> Accumulator<T> {
     pub fn new(next_snapshot_index: u32) -> Self {

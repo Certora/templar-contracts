@@ -269,13 +269,13 @@ impl MarketConfiguration {
         price_pair: &PricePair,
         block_timestamp_ms: u64,
     ) -> BorrowStatus {
-        if !self.satisfies_mcr_liquidation(borrow_position, price_pair) {
-            return BorrowStatus::Liquidation(LiquidationReason::Undercollateralization);
-        }
+        // if !self.satisfies_mcr_liquidation(borrow_position, price_pair) {
+        //     return BorrowStatus::Liquidation(LiquidationReason::Undercollateralization);
+        // }
 
-        if !self.is_within_maximum_borrow_duration(borrow_position, block_timestamp_ms) {
-            return BorrowStatus::Liquidation(LiquidationReason::Expiration);
-        }
+        // if !self.is_within_maximum_borrow_duration(borrow_position, block_timestamp_ms) {
+        //     return BorrowStatus::Liquidation(LiquidationReason::Expiration);
+        // }
 
         BorrowStatus::Healthy
     }

@@ -1,17 +1,29 @@
-use std::{alloc::GlobalAlloc, io::Read, num::{NonZeroU16, NonZeroU32}, str::{from_utf8_unchecked, FromStr}};
+use std::{
+    marker::PhantomData, num::{NonZeroU16, NonZeroU32}, str::{from_utf8_unchecked, FromStr}
+};
 
-use cvlr::cvlr_assume;
 use near_sdk::{json_types::U128, AccountId};
 
-use crate::{accumulator::Accumulator, asset::{BorrowAsset, CollateralAsset, FungibleAssetAmount}, borrow::BorrowPosition, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}};
+use crate::{
+    accumulator::Accumulator, asset::{AssetClass, BorrowAsset}, borrow::BorrowPosition, oracle::pyth::Price, price::PricePair, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}
+};
 
 #[inline(never)]
 pub fn certora_ite<E>(b: bool, tt: E, ff: E) -> E {
-    if b { tt } else { ff }
+    if b {
+        tt
+    } else {
+        ff
+    }
 }
 
+#[inline(never)]
 pub fn certora_choose<E>(tt: E, ff: E) -> E {
-    if bool::nondet() { tt } else { ff }
+    if bool::nondet() {
+        tt
+    } else {
+        ff
+    }
 }
 
 macro_rules! nondet_choice {
@@ -31,7 +43,7 @@ macro_rules! make_project_nondet_ {
             }
             macro_rules! declare_nondet {
                 (from_nondet, $t:ty) => {
-                    impl $name for $t { 
+                    impl $name for $t {
                         fn nondet() -> Self { cvlr::nondet::nondet() }
                     }
                 };
@@ -77,53 +89,43 @@ declare_nondet!(from_nondet, usize);
 declare_nondet!(from_nondet, i8);
 declare_nondet!(from_nondet, i16);
 declare_nondet!(from_nondet, i32);
+declare_nondet!(from_nondet, i64);
 declare_nondet!(from_nondet, i128);
 declare_nondet!(from_nondet, bool);
+
 declare_nondet!(
     [u8; 32],
     {
-        let mut whole = [0u8; 32];
-        let (first, second) = whole.split_at_mut(16);
-        first.copy_from_slice(&u128::nondet().to_le_bytes());
-        second.copy_from_slice(&u128::nondet().to_le_bytes());
-        whole
+        let mut whole = [0u64; 4];
+        whole[0] = TemplarNondet::nondet();
+        whole[1] = TemplarNondet::nondet();
+        whole[2] = TemplarNondet::nondet();
+        whole[3] = TemplarNondet::nondet();
+        unsafe { 
+            std::mem::transmute(whole)
+        }
     }
 );
 declare_nondet!(
     [u64; 8],
     {
         let mut whole = [0u64; 8];
-        unsafe {
-            let a = std::ptr::from_ref(&u128::nondet());
-            let b = std::ptr::from_ref(&u128::nondet());
-            let c = std::ptr::from_ref(&u128::nondet());
-            let d = std::ptr::from_ref(&u128::nondet());
-            let pwhole: *mut u128 = whole.as_mut_ptr().cast();
-            std::ptr::copy_nonoverlapping(
-                a, 
-                pwhole, 
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                b, 
-                pwhole.offset(1),
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                c, 
-                pwhole.offset(2),
-                1,
-            ); 
-            std::ptr::copy_nonoverlapping(
-                d, 
-                pwhole.offset(3),
-                1,
-            ); 
-        }
+        whole[0] = TemplarNondet::nondet();
+        whole[1] = TemplarNondet::nondet();
+        whole[2] = TemplarNondet::nondet();
+        whole[3] = TemplarNondet::nondet();
+        whole[4] = TemplarNondet::nondet();
+        whole[5] = TemplarNondet::nondet();
+        whole[6] = TemplarNondet::nondet();
+        whole[7] = TemplarNondet::nondet();
         whole
     }
 );
-declare_nondet!(primitive_types::U512, primitive_types::U512(TemplarNondet::nondet()));
+
+declare_nondet!(
+    primitive_types::U512,
+    primitive_types::U512(TemplarNondet::nondet())
+);
 // declare_nondet!(from_nondet, FungibleAssetAmount<BorrowAsset>);
 // declare_nondet!(from_nondet, FungibleAssetAmount<CollateralAsset>);
 declare_nondet!(
@@ -137,7 +139,7 @@ declare_nondet!(
 );
 declare_nondet!(IncomingDeposit, amount, activate_at_snapshot_index => IncomingDeposit { amount, activate_at_snapshot_index });
 declare_nondet!(option);
-// declare_nondet!(AccountId, 
+// declare_nondet!(AccountId,
 //     {
 //         let foo = Box<String::from("asdf").into_boxed_str()>;
 
@@ -145,38 +147,39 @@ declare_nondet!(option);
 // //    FromStr::from_str("nondet").unwrap()
 // );
 declare_nondet!(near_sdk::json_types::U64, x => near_sdk::json_types::U64(x));
+declare_nondet!(near_sdk::json_types::I64, x => near_sdk::json_types::I64(x));
 
 declare_nondet!(U128, y => U128(y));
 
 declare_nondet!(
     crate::supply::Deposit,
-    active, incoming, outgoing => 
+    active, incoming, outgoing =>
     crate::supply::Deposit { active, incoming, outgoing }
 );
 
 declare_nondet!(
-    SupplyPosition, 
-    started_at_block_timestamp_ms, borrow_asset_deposit, borrow_asset_yield => 
+    SupplyPosition,
+    started_at_block_timestamp_ms, borrow_asset_deposit, borrow_asset_yield =>
     SupplyPosition::new_raw(started_at_block_timestamp_ms, borrow_asset_yield, borrow_asset_deposit)
 );
 
 declare_nondet!(
-    BorrowPosition,
-            started_at_block_timestamp_ms,
-            collateral_asset_deposit,
-            borrow_asset_principal,
-            borrow_asset_fees,
-            temporary_lock,
-            is_liquidation_locked =>
-            BorrowPosition::new_raw(
-            started_at_block_timestamp_ms,
-            collateral_asset_deposit,
-            borrow_asset_principal,
-            borrow_asset_fees,
-            temporary_lock,
-            is_liquidation_locked
-            )
-        );
+BorrowPosition,
+        started_at_block_timestamp_ms,
+        collateral_asset_deposit,
+        borrow_asset_principal,
+        borrow_asset_fees,
+        temporary_lock,
+        is_liquidation_locked =>
+        BorrowPosition::new_raw(
+        started_at_block_timestamp_ms,
+        collateral_asset_deposit,
+        borrow_asset_principal,
+        borrow_asset_fees,
+        temporary_lock,
+        is_liquidation_locked
+        )
+    );
 
 declare_nondet!(
     StaticYieldRecord,
@@ -184,24 +187,17 @@ declare_nondet!(
     StaticYieldRecord { collateral_asset, borrow_asset }
 );
 
+declare_nondet!(NonZeroU16, {
+    let x = u16::nondet();
+    cvlr::cvlr_assume!(x != 0);
+    unsafe { NonZeroU16::new_unchecked(x) }
+});
 
-declare_nondet!(
-    NonZeroU16,
-    {
-        let x = u16::nondet();
-        cvlr::cvlr_assume!(x != 0);
-        unsafe { NonZeroU16::new_unchecked(x) }
-    }
-);
-
-declare_nondet!(
-    NonZeroU32,
-    {
-        let x = u32::nondet();
-        cvlr::cvlr_assume!(x != 0);
-        unsafe { NonZeroU32::new_unchecked(x) }
-    }
-);
+declare_nondet!(NonZeroU32, {
+    let x = u32::nondet();
+    cvlr::cvlr_assume!(x != 0);
+    unsafe { NonZeroU32::new_unchecked(x) }
+});
 
 fn nondet_bytes_sz(sz: usize) -> String {
     unsafe {
@@ -209,7 +205,6 @@ fn nondet_bytes_sz(sz: usize) -> String {
         String::from_raw_parts(bytes, sz, sz)
     }
 }
-
 
 impl TemplarNondet for Box<str> {
     #[inline(never)]
@@ -222,8 +217,11 @@ impl TemplarNondet for Box<str> {
     }
 }
 
+
 #[inline(never)]
-fn id<A>(a: A) -> A { a }
+fn id<A>(a: A) -> A {
+    a
+}
 
 impl TemplarNondet for AccountId {
     #[inline(never)]
@@ -241,11 +239,11 @@ unsafe extern "C" {
 
 pub trait LiftOption {
     fn nondet_option(&self) -> Option<&Self> {
-        certora_choose(None, Some(self) )
+        certora_choose(None, Some(self))
     }
     fn nondet_option_mut(&mut self) -> Option<&mut Self> {
-        certora_choose(None, Some(self) )
+        certora_choose(None, Some(self))
     }
 }
 
-impl <T> LiftOption for T {}
+impl<T> LiftOption for T {}

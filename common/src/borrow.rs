@@ -1,16 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
+use cvlr::nondet;
 use near_sdk::{env, json_types::U64, near, AccountId};
 
 use crate::{
-    accumulator::{AccumulationRecord, Accumulator},
-    asset::{BorrowAsset, BorrowAssetAmount, CollateralAssetAmount},
-    asset_op,
-    event::MarketEvent,
-    market::Market,
-    number::Decimal,
-    price::PricePair,
-    MS_IN_A_YEAR,
+    accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, CollateralAssetAmount}, asset_op, event::MarketEvent, market::Market, models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal, price::PricePair, MS_IN_A_YEAR
 };
 
 /// This struct can only be constructed after accumulating interest on a
@@ -18,6 +12,9 @@ use crate::{
 /// is safe to perform certain other operations.
 #[derive(Clone, Copy)]
 pub struct InterestAccumulationProof(());
+
+declare_nondet!(InterestAccumulationProof,
+InterestAccumulationProof(()));
 
 #[cfg(test)]
 impl InterestAccumulationProof {
@@ -60,6 +57,7 @@ pub struct BorrowPosition {
     pub temporary_lock: BorrowAssetAmount,
     pub is_liquidation_locked: bool,
 }
+
 
 impl BorrowPosition {
     pub fn new(current_snapshot_index: u32) -> Self {
@@ -465,11 +463,11 @@ impl<'a> BorrowPositionGuard<'a> {
         asset_op!(self.market.borrow_asset_borrowed += amount);
         self.market.snapshot();
 
-        MarketEvent::BorrowWithdrawn {
-            account_id: self.account_id.clone(),
-            borrow_asset_amount: amount,
-        }
-        .emit();
+        // MarketEvent::BorrowWithdrawn {
+        //     account_id: self.account_id.clone(),
+        //     borrow_asset_amount: amount,
+        // }
+        // .emit();
     }
 
     /// Returns the amount that is left over after repaying the whole

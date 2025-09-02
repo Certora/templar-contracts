@@ -31,7 +31,7 @@ pub struct BorrowAssetMetrics {
 #[near(serializers = [json, borsh])]
 pub struct YieldWeights {
     pub supply: NonZeroU16,
-    pub r#static: models::hash_map::HashMap<AccountId, u16>,
+    pub r#static: models::hash_map::HashMap<AccountId, u16>, // Meeting notes: maybe we assume this is empty
 }
 
 declare_nondet!(YieldWeights,

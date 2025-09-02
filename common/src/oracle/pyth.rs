@@ -18,6 +18,7 @@
 //! limitations under the License.
 use std::{collections::HashMap, fmt::Display};
 
+use cvlr::nondet;
 use near_sdk::{
     ext_contract,
     json_types::{I64, U64},
@@ -66,6 +67,18 @@ pub struct Price {
     pub expo: i32,
     /// Unix timestamp of when this price was computed
     pub publish_time: i64,
+}
+
+impl TemplarNondet for Price {
+    #[inline(never)]
+    fn nondet() -> Self {
+        Price {
+            price: TemplarNondet::nondet(),
+            conf: TemplarNondet::nondet(),
+            expo: i32::nondet(),
+            publish_time: i64::nondet(),
+        }
+    }
 }
 
 #[ext_contract(ext_pyth)]

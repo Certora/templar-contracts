@@ -227,9 +227,10 @@ impl Contract {
             env::panic_str("Invariant violation: borrow position does not exist after transfer.");
         };
 
-        let proof = borrow_position.accumulate_interest();
+        let proof: templar_common::borrow::InterestAccumulationProof = borrow_position.accumulate_interest();
         borrow_position.record_borrow_asset_in_flight_end(proof, amount, fees);
 
+        // Even if the promise is not fulfilled, the above should happen.
         match env::promise_result(0) {
             PromiseResult::Successful(_) => {
                 // GREAT SUCCESS

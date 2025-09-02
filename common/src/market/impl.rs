@@ -36,10 +36,12 @@ pub struct Market {
     pub borrow_asset_borrowed: BorrowAssetAmount,
     /// Market-wide collateral asset deposit tracking.
     pub collateral_asset_deposited: CollateralAssetAmount,
+    // Meeting notes: maybe munge this?
     pub(crate) supply_positions: models::unordered_map::UnorderedMap<AccountId, SupplyPosition>,
     pub(crate) borrow_positions: models::unordered_map::UnorderedMap<AccountId, BorrowPosition>,
     pub current_snapshot: Snapshot,
     pub finalized_snapshots: ChunkedAppendOnlyList<Snapshot, 128>,
+    // Meeting notes: maybe munge this?
     pub withdrawal_queue: WithdrawalQueue,
     pub static_yield: models::lookup_map::LookupMap<AccountId, StaticYieldRecord>,
 }

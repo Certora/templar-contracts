@@ -1,20 +1,49 @@
+use core::borrow;
 use std::borrow::Borrow;
 use std::cell::UnsafeCell;
 use std::collections::HashMap;
 use std::string::{FromUtf16Error, FromUtf8Error};
 
 use models::templar_nondet::*;
-use near_sdk::json_types::{U64, U128};
+use near_sdk::env::block_timestamp_ms;
+use near_sdk::json_types::{U128, U64};
+use near_sdk::near;
 use near_sdk::store::key::Identity;
 use near_sdk::store::LookupMap;
-use near_sdk::near;
 
+use cvlr::{cvlr_assert, cvlr_assume};
 use cvlr::{cvlr_satisfy, rule};
-use cvlr::cvlr_assert;
 use near_sdk::AccountId;
+use templar_common::asset::BorrowAssetAmount;
+use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
 use templar_common::market::Market;
-use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
+use templar_common::oracle::pyth::{OracleResponse, Price};
+use templar_common::price::PricePair;
+use templar_common::supply::{SupplyPositionGuard, YieldAccumulationProof};
+use templar_common::{models, supply};
+
+#[no_mangle]
+#[inline(never)]
+pub fn unsafe_account_id_clone(a: &AccountId) -> AccountId {
+    unsafe {
+        let ai: u64 = std::mem::transmute(a.as_bytes());
+
+        std::mem::transmute(ai)
+    }
+}
+
+#[no_mangle]
+#[inline(never)]
+pub fn unsafe_account_id_eq(a: &AccountId, b: &AccountId) -> bool {
+    unsafe {
+        let ai: u64 = std::mem::transmute(a.as_bytes());
+
+        let bi: u64 = std::mem::transmute(b.as_bytes());
+
+        ai == bi
+    }
+}
 
 #[rule]
 pub fn split_ok_1() {
@@ -24,9 +53,7 @@ pub fn split_ok_1() {
 
     let mut m: models::hash_map::HashMap<u32, u32> = models::hash_map::HashMap::nondet();
     m.apply_rule(i, None);
-    let _ = m
-        .entry(i)
-        .or_insert(v);
+    let _ = m.entry(i).or_insert(v);
     let v2 = m.get(&j);
     v2.map(|the_val| cvlr_satisfy!(*the_val == v));
     v2.map(|the_val| cvlr_satisfy!(*the_val != v));
@@ -51,24 +78,91 @@ pub fn accounts_can_be_neq() {
 
 #[rule]
 pub fn record_borrow_asset_protocol_yield_intergity() {
-	let amount = TemplarNondet::nondet(); //wrap to type BorrowAssetAmount
-	let mut market = Market::nondet(); //nondet Market, mutable
-	let protocol_id = market.configuration.protocol_account_id.clone();
+    let amount = TemplarNondet::nondet(); //wrap to type BorrowAssetAmount
+    let mut market = Market::nondet(); //nondet Market, mutable
+    let protocol_id = market.configuration.protocol_account_id.clone();
     market.static_yield.focus(protocol_id.clone());
-	let yield_borrow_asset_protocol_pre = 
-        market.static_yield
-            .get(&protocol_id)
-            .unwrap_or_default()
-            .borrow_asset;
-            
+    let yield_borrow_asset_protocol_pre = market
+        .static_yield
+        .get(&protocol_id)
+        .unwrap_or_default()
+        .borrow_asset;
+
     market.record_borrow_asset_protocol_yield(amount);
-  
-	let yield_borrow_asset_protocol_post = market.static_yield
-          .get(&protocol_id).unwrap_or_default().borrow_asset;
+
+    let yield_borrow_asset_protocol_post = market
+        .static_yield
+        .get(&protocol_id)
+        .unwrap_or_default()
+        .borrow_asset;
 
     cvlr_satisfy!(true);
- 	//cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));
+    //cvlr_assert!(u128::from(yield_borrow_asset_protocol_post) == u128::from(yield_borrow_asset_protocol_pre) + u128::from(amount));
 }
+
+#[rule]
+pub fn add_incoming_sanity(mut supply_pos_guard: SupplyPositionGuard) {
+    let amount = TemplarNondet::nondet();
+    let block_ts = u64::nondet();
+    let proof = supply_pos_guard.accumulate_yield();
+    supply_pos_guard.record_deposit(proof, amount, block_ts);
+    cvlr_assert!(false);
+}
+
+#[rule]
+pub fn snapshot_sanity() {
+    let mut market = Market::nondet();
+    market.snapshot();
+    cvlr_assert!(false);
+}
+
+#[rule]
+pub fn accumulate_interest_sanity() {
+    let mut market = Market::nondet();
+    let account_id = AccountId::nondet();
+    let borrow_position = BorrowPosition::nondet();
+    let mut bp_guard =
+            BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone()); 
+    bp_guard.accumulate_interest();
+    cvlr_assert!(false);
+}
+
+#[rule]
+pub fn borrow_preserves_health() {
+    let mut market = Market::nondet();
+    let account_id = AccountId::nondet();
+    let amount = BorrowAssetAmount::nondet();
+    let fees = BorrowAssetAmount::nondet();
+    let borrow_position = BorrowPosition::nondet();
+    let price_pair = TemplarNondet::nondet();
+    let block_ts = u64::nondet();
+
+    let heath_pre = market
+        .configuration
+        .borrow_status(&borrow_position, &price_pair, block_ts);
+
+    {
+        let mut bp_guard =
+            BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone());
+
+        let proof = InterestAccumulationProof::nondet();
+        cvlr_assume!(heath_pre.is_healthy());
+
+        bp_guard.record_borrow_asset_withdrawal(proof, amount, fees);
+    }
+
+    let heath_post = market
+        .configuration
+        .borrow_status(&borrow_position, &price_pair, block_ts);
+
+    // cvlr_assert!(heath_post.is_healthy());
+    cvlr_assert!(false);
+}
+
+// loop_iter should be 1
+// accumutae_interest
+// snapshot
+
 
 // #[near(serializers=[])]
 // pub struct MyData {
@@ -104,8 +198,6 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
 //     let (_key, _elt) = LookupMap::<u64, MyData, Identity>::load_element(&l.prefix, &k);
 //     cvlr_assert!(false);
 // }
-
-
 
 // #[rule]
 // pub fn lookup1(k: u64, l: LookupMap<u64, u64>) {
