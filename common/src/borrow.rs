@@ -461,7 +461,7 @@ impl<'a> BorrowPositionGuard<'a> {
             .unwrap_or_else(|| env::panic_str("Increase borrow asset principal overflow"));
 
         asset_op!(self.market.borrow_asset_borrowed += amount);
-        // self.market.snapshot();
+        self.market.snapshot();
 
         // MarketEvent::BorrowWithdrawn {
         //     account_id: self.account_id.clone(),
@@ -512,7 +512,9 @@ impl<'a> BorrowPositionGuard<'a> {
     }
 
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
-        self.market.snapshot();
+        // maybe nondet the snapshot and then add assumes.
+        self.market.snapshot(); // redirect to our impl of snapshot which is in the notion doc
+
 
         let accumulation_record = self.calculate_interest(snapshot_limit);
 

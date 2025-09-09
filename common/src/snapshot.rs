@@ -7,14 +7,14 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [borsh, json])]
 pub struct Snapshot {
-    pub(crate) time_chunk: TimeChunk,
-    pub(crate) end_timestamp_ms: U64,
-    pub(crate) borrow_asset_deposited_active: BorrowAssetAmount,
-    borrow_asset_deposited_incoming: BorrowAssetAmount,
-    borrow_asset_borrowed: BorrowAssetAmount,
-    collateral_asset_deposited: CollateralAssetAmount,
-    yield_distribution: BorrowAssetAmount,
-    interest_rate: Decimal,
+    pub time_chunk: TimeChunk,
+    pub end_timestamp_ms: U64,
+    pub borrow_asset_deposited_active: BorrowAssetAmount,
+    pub borrow_asset_deposited_incoming: BorrowAssetAmount,
+    pub borrow_asset_borrowed: BorrowAssetAmount,
+    pub collateral_asset_deposited: CollateralAssetAmount,
+    pub yield_distribution: BorrowAssetAmount,
+    pub interest_rate: Decimal,
 }
 
 declare_nondet!(

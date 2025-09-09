@@ -1,11 +1,55 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
 use near_sdk::{
-    collections::{LookupMap, UnorderedMap}, env, near, AccountId, BorshStorageKey, IntoStorageKey
+    collections::{LookupMap, UnorderedMap},
+    env,
+    json_types::{U128, U64},
+    near, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef}, chunked_append_only_list::ChunkedAppendOnlyList, event::MarketEvent, market::{MarketConfiguration, WithdrawalResolution}, models::{self, templar_nondet::{declare_nondet, TemplarNondet}}, number::Decimal, snapshot::Snapshot, static_yield::StaticYieldRecord, supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef}, withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue}
+    asset::{BorrowAssetAmount, CollateralAssetAmount},
+    asset_op,
+    borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
+    chunked_append_only_list::ChunkedAppendOnlyList,
+    event::MarketEvent,
+    market::{MarketConfiguration, WithdrawalResolution},
+    models::{
+        self,
+        templar_nondet::{declare_nondet, TemplarNondet},
+    },
+    number::Decimal,
+    snapshot::Snapshot,
+    static_yield::StaticYieldRecord,
+    supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
+    time_chunk::TimeChunk,
+    withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue},
+};
+
+pub static mut GHOST_SNAPSHOT: Snapshot = Snapshot {
+    time_chunk: TimeChunk(U64(0)),
+    end_timestamp_ms: U64(0),
+    borrow_asset_deposited_active: BorrowAssetAmount {
+        amount: U128(0),
+        discriminant: PhantomData,
+    },
+    borrow_asset_deposited_incoming: BorrowAssetAmount {
+        amount: U128(0),
+        discriminant: PhantomData,
+    },
+    borrow_asset_borrowed: BorrowAssetAmount {
+        amount: U128(0),
+        discriminant: PhantomData,
+    },
+    collateral_asset_deposited: CollateralAssetAmount {
+        amount: U128(0),
+        discriminant: PhantomData,
+    },
+    yield_distribution: BorrowAssetAmount {
+        amount: U128(0),
+        discriminant: PhantomData,
+    },
+    interest_rate: Decimal::ZERO,
 };
 
 #[derive(BorshStorageKey)]
@@ -128,50 +172,55 @@ impl Market {
         self.snapshot_with_yield_distribution(BorrowAssetAmount::zero())
     }
 
-    fn snapshot_with_yield_distribution(&mut self, yield_distribution: BorrowAssetAmount) -> u32 {
+
+    pub fn snapshot_with_yield_distribution(
+        &mut self,
+        yield_distribution: BorrowAssetAmount,
+    ) -> u32 {
         let time_chunk = self.configuration.time_chunk_configuration.now();
 
         // If still in current time chunk, just update the current snapshot.
         if self.current_snapshot.time_chunk == time_chunk {
-            self.current_snapshot.update_active(
-                self.borrow_asset_deposited_active,
-                self.borrow_asset_borrowed,
-                self.collateral_asset_deposited,
-                &self.configuration.borrow_interest_rate_strategy,
-            );
+            // self.current_snapshot.update_active(
+            //     self.borrow_asset_deposited_active,
+            //     self.borrow_asset_borrowed,
+            //     self.collateral_asset_deposited,
+            //     &self.configuration.borrow_interest_rate_strategy,
+            // );
             self.current_snapshot.add_yield(yield_distribution);
-            self.current_snapshot.set_borrow_asset_deposited_incoming(
-                *self
-                    .borrow_asset_deposited_incoming
-                    .get(&self.finalized_snapshots.len())
-                    .unwrap_or(&0.into()),
-            );
+            // self.current_snapshot.set_borrow_asset_deposited_incoming(
+            //     *self
+            //         .borrow_asset_deposited_incoming
+            //         .get(&self.finalized_snapshots.len())
+            //         .unwrap_or(&0.into()),
+            // );
         } else {
             // Otherwise, finalize the current snapshot and create a new one.
-            let deposited_incoming = self
-                .borrow_asset_deposited_incoming
-                .remove(&self.finalized_snapshots.len())
-                .unwrap_or(0.into());
-            asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
+            // let deposited_incoming = self
+            //     .borrow_asset_deposited_incoming
+            //     .remove(&self.finalized_snapshots.len())
+            //     .unwrap_or(0.into());
+            // asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
             let mut snapshot = Snapshot::new(time_chunk);
             snapshot.set_yield_distribution(yield_distribution);
-            snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
-            snapshot.update_active(
-                self.borrow_asset_deposited_active,
-                self.borrow_asset_borrowed,
-                self.collateral_asset_deposited,
-                &self.configuration.borrow_interest_rate_strategy,
-            );
-            std::mem::swap(&mut snapshot, &mut self.current_snapshot);
-            MarketEvent::SnapshotFinalized {
-                index: self.finalized_snapshots.len(),
-                snapshot: snapshot.clone(),
-            }
-            .emit();
-            self.finalized_snapshots.push(snapshot);
+            // snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
+            // snapshot.update_active(
+            //     self.borrow_asset_deposited_active,
+            //     self.borrow_asset_borrowed,
+            //     self.collateral_asset_deposited,
+            //     &self.configuration.borrow_interest_rate_strategy,
+            // );
+            // std::mem::swap(&mut snapshot, &mut self.current_snapshot);
+            // MarketEvent::SnapshotFinalized {
+            //     index: self.finalized_snapshots.len(),
+            //     snapshot: snapshot.clone(),
+            // }
+            // .emit();
+            // self.finalized_snapshots.push(snapshot);
         }
 
         self.finalized_snapshots.len()
+        // 0
     }
 
     pub fn get_borrow_asset_available_to_borrow(&self) -> BorrowAssetAmount {

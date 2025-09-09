@@ -7,9 +7,9 @@ use near_sdk::AccountId;
 use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
 use templar_common::market::Market;
+use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
-use templar_common::supply::{SupplyPositionGuard};
-use templar_common::{models};
+use templar_common::supply::SupplyPositionGuard;
 
 #[no_mangle]
 #[inline(never)]
@@ -90,6 +90,74 @@ pub fn record_borrow_asset_protocol_yield_intergity() {
 }
 
 #[rule]
+pub fn record_borrow_asset_yield_distribution_integrity_1() {
+    let amount = BorrowAssetAmount::nondet();
+    let mut market = Market::nondet();
+
+    let account_id = AccountId::nondet();
+
+    let static_yield_account_before = market.static_yield.get(&account_id);
+    market.record_borrow_asset_yield_distribution(amount);
+
+    let static_yield_acount_after = market.static_yield.get(&account_id);
+
+    cvlr_assert!(static_yield_acount_after >= static_yield_account_before);
+}
+
+#[rule]
+pub fn record_borrow_asset_yield_distribution_integrity_2() {
+    let amount = BorrowAssetAmount::nondet();
+    let mut market = Market::nondet();
+
+    let account_id = AccountId::nondet();
+
+    let yield_weight_account = market
+        .configuration
+        .yield_weights
+        .r#static
+        .get(&account_id)
+        .copied();
+
+    let static_yield_account_before = market.static_yield.get(&account_id);
+    market.record_borrow_asset_yield_distribution(amount);
+
+    let static_yield_acount_after = market.static_yield.get(&account_id);
+
+    cvlr_assert!(
+        !(static_yield_acount_after > static_yield_account_before)
+            || yield_weight_account > Some(0)
+    );
+}
+
+#[rule]
+pub fn snapshot_with_yield_distribution_integrity() {
+    let amount = BorrowAssetAmount::nondet();
+    let mut market = Market::nondet();
+
+    let current_snapshot_before = &market.current_snapshot.clone();
+    let mut snapshot_yield_distribution_before = current_snapshot_before.yield_distribution();
+
+    
+    market.snapshot_with_yield_distribution(amount);
+    
+
+    let current_snapshot_after = &market.current_snapshot;
+    let snapshot_yield_distribution_after = current_snapshot_after.yield_distribution();
+
+    let time_chunk_changed =
+        current_snapshot_after.time_chunk() != current_snapshot_before.time_chunk();
+
+    if time_chunk_changed {
+        cvlr_assert!(snapshot_yield_distribution_after == amount);
+    }
+    else {
+        let _ = snapshot_yield_distribution_before.join(amount);
+        cvlr_assert!(
+            snapshot_yield_distribution_after == snapshot_yield_distribution_before);
+    }
+}
+
+#[rule]
 pub fn add_incoming_sanity(mut supply_pos_guard: SupplyPositionGuard) {
     let amount = TemplarNondet::nondet();
     let block_ts = u64::nondet();
@@ -128,7 +196,6 @@ pub fn borrow_preserves_health() {
     let heath_pre = market
         .configuration
         .borrow_status(&borrow_position, &price_pair, block_ts);
-
     {
         let mut bp_guard =
             BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone());

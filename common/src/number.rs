@@ -44,7 +44,7 @@ macro_rules! dec {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Decimal {
-    repr: U512,
+    pub repr: U512,
 }
 
 declare_nondet!(
