@@ -16,29 +16,22 @@ pub enum InterestRateStrategy {
     Exponential2(Exponential2),
 }
 
-declare_nondet!(
-    InterestRateStrategy,
-    {
-        let _d = u8::nondet();
-        nondet_choice!(
-            Self::Linear(
-                Linear { 
-                    base : Decimal::nondet(),
-                    top : Decimal::nondet(),
-                }
-            ),
-            Self::Piecewise(
-                Piecewise { params: TemplarNondet::nondet(), i_negative_rate_2_b: TemplarNondet::nondet() }
-            ),
-            Self::Exponential2(
-                Exponential2 {
-                    params: TemplarNondet::nondet(),
-                    i_factor: TemplarNondet::nondet(),
-                }
-            )
-        )
-    }
-);
+declare_nondet!(InterestRateStrategy, {
+    nondet_choice!(
+        Self::Linear(Linear {
+            base: Decimal::nondet(),
+            top: Decimal::nondet(),
+        }),
+        Self::Piecewise(Piecewise {
+            params: TemplarNondet::nondet(),
+            i_negative_rate_2_b: TemplarNondet::nondet()
+        }),
+        Self::Exponential2(Exponential2 {
+            params: TemplarNondet::nondet(),
+            i_factor: TemplarNondet::nondet(),
+        })
+    )
+});
 
 impl InterestRateStrategy {
     pub const fn zero() -> Self {
@@ -237,9 +230,10 @@ impl UsageCurve for Exponential2 {
             "Invariant violation: Usage ratio cannot be over 100%.",
         );
 
-        #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
-        (self.params.base
-            + self.i_factor * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32))
+        Decimal::nondet()
+        // #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
+        // (self.params.base
+        //     + self.i_factor * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32))
     }
 }
 
@@ -253,7 +247,7 @@ pub struct Exponential2Params {
 
 declare_nondet!(
     Exponential2Params,
-    base, top, eccentricity => 
+    base, top, eccentricity =>
     Exponential2Params { base, top, eccentricity }
 );
 

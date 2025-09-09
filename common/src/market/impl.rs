@@ -166,7 +166,7 @@ impl Market {
                 .borrow_asset_deposited_incoming
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
-            // asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
+            asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
             let mut snapshot = Snapshot::new(time_chunk);
             snapshot.set_yield_distribution(yield_distribution);
             snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
