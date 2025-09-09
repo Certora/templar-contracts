@@ -1,7 +1,7 @@
 use near_sdk::{near, AccountId, Gas, Promise};
 
 use crate::{
-    models::templar_nondet::*, oracle::pyth::{ext_pyth, OracleResponse, Price, PriceIdentifier}, price::PricePair
+    models::templar_nondet::*, oracle::pyth::{ext_pyth, OracleResponse, PriceIdentifier}, price::PricePair
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

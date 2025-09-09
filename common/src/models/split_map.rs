@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, cell::RefCell, marker::PhantomData, ops::Deref};
+use std::{borrow::Borrow, cell::RefCell, marker::PhantomData};
 use near_sdk::near;
 use crate::models::templar_nondet::*;
 

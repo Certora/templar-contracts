@@ -3,11 +3,17 @@ use std::{io::ErrorKind, ops::Deref};
 use near_sdk::{borsh, json_types::U64, near, AccountId};
 
 use crate::{
-    models::templar_nondet::*,
     asset::{
         AssetClass, BorrowAsset, BorrowAssetAmount, CollateralAsset, CollateralAssetAmount,
         FungibleAsset, FungibleAssetAmount,
-    }, borrow::{BorrowPosition, BorrowStatus, LiquidationReason}, fee::{Fee, TimeBasedFee}, interest_rate_strategy::InterestRateStrategy, market::Market, models::templar_nondet::declare_nondet, number::Decimal, price::{PricePair, Valuation}, time_chunk::TimeChunkConfiguration
+    },
+    borrow::{BorrowPosition, BorrowStatus, LiquidationReason},
+    fee::{Fee, TimeBasedFee},
+    interest_rate_strategy::InterestRateStrategy,
+    models::templar_nondet::{declare_nondet, *},
+    number::Decimal,
+    price::{PricePair, Valuation},
+    time_chunk::TimeChunkConfiguration,
 };
 
 use super::{PriceOracleConfiguration, YieldWeights};
@@ -23,9 +29,12 @@ pub struct ValidAmountRange<A: AssetClass + PartialOrd>(
     #[borsh(deserialize_with = "deserialize_valid_amount_range")] AmountRange<A>,
 );
 
-impl <A: AssetClass + PartialOrd> TemplarNondet for ValidAmountRange<A>  {
+impl<A: AssetClass + PartialOrd> TemplarNondet for ValidAmountRange<A> {
     fn nondet() -> Self {
-        Self(AmountRange { minimum: TemplarNondet::nondet(), maximum: TemplarNondet::nondet() })
+        Self(AmountRange {
+            minimum: TemplarNondet::nondet(),
+            maximum: TemplarNondet::nondet(),
+        })
     }
 }
 
@@ -269,13 +278,13 @@ impl MarketConfiguration {
         price_pair: &PricePair,
         block_timestamp_ms: u64,
     ) -> BorrowStatus {
-        // if !self.satisfies_mcr_liquidation(borrow_position, price_pair) {
-        //     return BorrowStatus::Liquidation(LiquidationReason::Undercollateralization);
-        // }
+        if !self.satisfies_mcr_liquidation(borrow_position, price_pair) {
+            return BorrowStatus::Liquidation(LiquidationReason::Undercollateralization);
+        }
 
-        // if !self.is_within_maximum_borrow_duration(borrow_position, block_timestamp_ms) {
-        //     return BorrowStatus::Liquidation(LiquidationReason::Expiration);
-        // }
+        if !self.is_within_maximum_borrow_duration(borrow_position, block_timestamp_ms) {
+            return BorrowStatus::Liquidation(LiquidationReason::Expiration);
+        }
 
         BorrowStatus::Healthy
     }

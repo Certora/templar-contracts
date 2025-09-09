@@ -1,11 +1,19 @@
 use std::ops::{Deref, DerefMut};
 
-use cvlr::nondet;
 use near_sdk::{env, json_types::U64, near, AccountId};
 
 use crate::{
-    accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, CollateralAssetAmount}, asset_op, event::MarketEvent, market::Market, models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal, price::PricePair, MS_IN_A_YEAR
+    accumulator::{AccumulationRecord, Accumulator},
+    asset::{BorrowAsset, BorrowAssetAmount, CollateralAssetAmount},
+    asset_op,
+    event::MarketEvent,
+    market::Market,
+    models::templar_nondet::declare_nondet,
+    number::Decimal,
+    price::PricePair,
+    MS_IN_A_YEAR,
 };
+use crate::models::templar_nondet::TemplarNondet;
 
 /// This struct can only be constructed after accumulating interest on a
 /// borrow position. This serves as proof that the interest has accrued, so it
@@ -13,15 +21,14 @@ use crate::{
 #[derive(Clone, Copy)]
 pub struct InterestAccumulationProof(());
 
-declare_nondet!(InterestAccumulationProof,
-InterestAccumulationProof(()));
-
 #[cfg(test)]
 impl InterestAccumulationProof {
     pub fn test() -> Self {
         Self(())
     }
 }
+
+declare_nondet!(InterestAccumulationProof, InterestAccumulationProof(()));
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [borsh, json])]

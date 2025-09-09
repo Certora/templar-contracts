@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use cvlr::cvlr_assert;
 use near_sdk::near;
 
 use crate::models::{split_map::SplitMap, templar_nondet::*};

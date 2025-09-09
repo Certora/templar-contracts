@@ -1,7 +1,7 @@
 use near_sdk::{json_types::U64, near};
 
 use crate::{
-    asset::{AssetClass, FungibleAssetAmount}, models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}, number::Decimal
+    asset::{AssetClass, FungibleAssetAmount}, models::templar_nondet::{nondet_choice, TemplarNondet}, number::Decimal
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]

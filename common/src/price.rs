@@ -4,7 +4,7 @@ use primitive_types::U256;
 
 use crate::{
     asset::{AssetClass, BorrowAsset, CollateralAsset, FungibleAssetAmount},
-    models::templar_nondet::{declare_nondet, LiftOption, TemplarNondet},
+    models::templar_nondet::TemplarNondet,
     number::Decimal,
     oracle::pyth,
 };
@@ -15,6 +15,18 @@ pub struct Price<T: AssetClass> {
     price: u128,
     confidence: u128,
     exponent: i32,
+}
+
+impl<T: AssetClass> TemplarNondet for crate::price::Price<T> {
+    #[inline(never)]
+    fn nondet() -> Self {
+        crate::price::Price {
+            _asset: PhantomData,
+            price: TemplarNondet::nondet(),
+            confidence: TemplarNondet::nondet(),
+            exponent: TemplarNondet::nondet(),
+        }
+    }
 }
 
 pub mod error {
@@ -29,18 +41,6 @@ pub mod error {
         ConfidenceIntervalTooLarge,
         #[error("Exponent out of bounds")]
         ExponentOutOfBounds,
-    }
-}
-
-impl<T: AssetClass> TemplarNondet for crate::price::Price<T> {
-    #[inline(never)]
-    fn nondet() -> Self {
-        crate::price::Price {
-            _asset: PhantomData,
-            price: TemplarNondet::nondet(),
-            confidence: TemplarNondet::nondet(),
-            exponent: TemplarNondet::nondet(),
-        }
     }
 }
 

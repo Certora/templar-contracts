@@ -2,7 +2,7 @@ use std::{cell::RefCell, marker::PhantomData};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::{near, IntoStorageKey};
-use cvlr::{cvlr_assert, nondet};
+use cvlr::{cvlr_assert};
 
 use crate::models::{split_map::SplitMap, templar_nondet::*};
 

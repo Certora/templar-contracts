@@ -1,11 +1,25 @@
 use std::collections::HashMap;
 
 use near_sdk::{
-    collections::{LookupMap, UnorderedMap}, env, near, AccountId, BorshStorageKey, IntoStorageKey
+    env, near, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef}, chunked_append_only_list::ChunkedAppendOnlyList, event::MarketEvent, market::{MarketConfiguration, WithdrawalResolution}, models::{self, templar_nondet::{declare_nondet, TemplarNondet}}, number::Decimal, snapshot::Snapshot, static_yield::StaticYieldRecord, supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef}, withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue}
+    asset::{BorrowAssetAmount, CollateralAssetAmount},
+    asset_op,
+    borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
+    chunked_append_only_list::ChunkedAppendOnlyList,
+    event::MarketEvent,
+    market::{MarketConfiguration, WithdrawalResolution},
+    models::{
+        self,
+        templar_nondet::{declare_nondet, TemplarNondet},
+    },
+    number::Decimal,
+    snapshot::Snapshot,
+    static_yield::StaticYieldRecord,
+    supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
+    withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue},
 };
 
 #[derive(BorshStorageKey)]
@@ -128,7 +142,7 @@ impl Market {
         self.snapshot_with_yield_distribution(BorrowAssetAmount::zero())
     }
 
-    fn snapshot_with_yield_distribution(&mut self, yield_distribution: BorrowAssetAmount) -> u32 {
+    pub fn snapshot_with_yield_distribution(&mut self, yield_distribution: BorrowAssetAmount) -> u32 {
         let time_chunk = self.configuration.time_chunk_configuration.now();
 
         // If still in current time chunk, just update the current snapshot.
@@ -152,7 +166,7 @@ impl Market {
                 .borrow_asset_deposited_incoming
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
-            asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
+            // asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
             let mut snapshot = Snapshot::new(time_chunk);
             snapshot.set_yield_distribution(yield_distribution);
             snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
@@ -163,11 +177,11 @@ impl Market {
                 &self.configuration.borrow_interest_rate_strategy,
             );
             std::mem::swap(&mut snapshot, &mut self.current_snapshot);
-            MarketEvent::SnapshotFinalized {
-                index: self.finalized_snapshots.len(),
-                snapshot: snapshot.clone(),
-            }
-            .emit();
+            // MarketEvent::SnapshotFinalized {
+            //     index: self.finalized_snapshots.len(),
+            //     snapshot: snapshot.clone(),
+            // }
+            // .emit();
             self.finalized_snapshots.push(snapshot);
         }
 

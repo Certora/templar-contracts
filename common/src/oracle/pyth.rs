@@ -18,7 +18,6 @@
 //! limitations under the License.
 use std::{collections::HashMap, fmt::Display};
 
-use cvlr::nondet;
 use near_sdk::{
     ext_contract,
     json_types::{I64, U64},

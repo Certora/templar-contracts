@@ -19,7 +19,7 @@ pub enum InterestRateStrategy {
 declare_nondet!(
     InterestRateStrategy,
     {
-        let d = u8::nondet();
+        let _d = u8::nondet();
         nondet_choice!(
             Self::Linear(
                 Linear { 
