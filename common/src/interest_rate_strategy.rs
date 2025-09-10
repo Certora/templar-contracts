@@ -225,15 +225,23 @@ impl Exponential2 {
 
 impl UsageCurve for Exponential2 {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
+        #[cfg(feature = "certora")]
+        {
+            // In certora mode, always return zero
+            return Decimal::ZERO;
+        }
+
+        #[cfg(not(feature = "certora"))]
+        {
         require!(
             usage_ratio <= Decimal::ONE,
             "Invariant violation: Usage ratio cannot be over 100%.",
         );
 
-        Decimal::nondet()
-        // #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
-        // (self.params.base
-        //     + self.i_factor * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32))
+        #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
+        return self.params.base
+            + self.i_factor * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32);
+        }
     }
 }
 

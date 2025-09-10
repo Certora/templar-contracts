@@ -22,3 +22,6 @@ rand = "0.8"
 
 [lints]
 workspace = true
+
+[features]
+certora = []
