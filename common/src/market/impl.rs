@@ -177,11 +177,13 @@ impl Market {
                 &self.configuration.borrow_interest_rate_strategy,
             );
             std::mem::swap(&mut snapshot, &mut self.current_snapshot);
+
+            // #[cfg(not(feature = "certora"))]
             // MarketEvent::SnapshotFinalized {
             //     index: self.finalized_snapshots.len(),
             //     snapshot: snapshot.clone(),
-            // }
-            // .emit();
+            // }.emit();
+
             self.finalized_snapshots.push(snapshot);
         }
 
