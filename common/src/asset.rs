@@ -194,7 +194,7 @@ impl AssetClass for BorrowAsset {}
 #[near(serializers = [borsh, json])]
 #[serde(from = "U128", into = "U128")]
 pub struct FungibleAssetAmount<T: AssetClass> {
-    amount: U128,
+    pub amount: U128,
     #[borsh(skip)]
     discriminant: PhantomData<T>,
 }

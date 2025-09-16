@@ -106,6 +106,7 @@ impl MarketExternalInterface for Contract {
             "New borrow position is outside of allowable range",
         );
 
+        // check here the state
         self.configuration
             .price_oracle_configuration
             .retrieve_price_pair()

@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use cvlr::cvlr_assume;
 use near_sdk::{
     env, near, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount},
+    asset::{BorrowAssetAmount, CollateralAssetAmount, FungibleAsset, FungibleAssetAmount},
     asset_op,
     borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
     chunked_append_only_list::ChunkedAppendOnlyList,
@@ -328,10 +329,10 @@ impl Market {
             return;
         }
 
-        MarketEvent::GlobalYieldDistributed {
-            borrow_asset_amount: amount,
-        }
-        .emit();
+        // MarketEvent::GlobalYieldDistributed {
+        //     borrow_asset_amount: amount,
+        // }
+        // .emit();
 
         // First, static yield.
 
@@ -342,14 +343,16 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            let share = amount
-                .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())
-                // Safety:
-                // Guaranteed share_weight <= total_weight
-                // Guaranteed sum(share_weights) == total_weight
-                // Guaranteed sum(floor(total_amount * share_weight / total_weight) for each share_weight in share_weights) <= total_amount
-                // Therefore this should never panic.
-                .unwrap();
+            // let share = amount
+            //     .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())
+            //     // Safety:
+            //     // Guaranteed share_weight <= total_weight
+            //     // Guaranteed sum(share_weights) == total_weight
+            //     // Guaranteed sum(floor(total_amount * share_weight / total_weight) for each share_weight in share_weights) <= total_amount
+            //     // Therefore this should never panic.
+            //     .unwrap();
+
+            let share = FungibleAssetAmount::nondet();
 
             let mut yield_record = self.static_yield.get(account_id).unwrap_or_default();
             // Assuming borrow_asset is implemented correctly:
@@ -365,6 +368,7 @@ impl Market {
             // Probably, it is okay to ignore this case. We can assume
             // that the configuration will only specify
             // correctly-implemented token contracts.
+
             asset_op!(yield_record.borrow_asset += share);
             self.static_yield.insert(account_id, &yield_record);
         }

@@ -205,6 +205,7 @@ impl Contract {
 
         drop(borrow_position);
 
+        // check state here
         self.configuration
             .borrow_asset
             .transfer(account_id.clone(), amount)

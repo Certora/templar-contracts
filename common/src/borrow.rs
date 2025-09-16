@@ -326,6 +326,7 @@ impl<M: Deref<Target = Market>> BorrowPositionRef<M> {
         }
     }
 
+
     pub fn is_eligible_for_liquidation(
         &self,
         price_pair: &PricePair,
@@ -521,7 +522,7 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        let accumulation_record = self.calculate_interest(snapshot_limit);
+        let accumulation_record = AccumulationRecord::nondet(); //self.calculate_interest(snapshot_limit);
 
         if !accumulation_record.amount.is_zero() {
             MarketEvent::InterestAccumulated {
