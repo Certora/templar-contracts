@@ -524,13 +524,13 @@ impl<'a> BorrowPositionGuard<'a> {
 
         let accumulation_record = AccumulationRecord::nondet(); //self.calculate_interest(snapshot_limit);
 
-        if !accumulation_record.amount.is_zero() {
-            MarketEvent::InterestAccumulated {
-                account_id: self.account_id.clone(),
-                borrow_asset_amount: accumulation_record.amount,
-            }
-            .emit();
-        }
+        // if !accumulation_record.amount.is_zero() {
+        //     MarketEvent::InterestAccumulated {
+        //         account_id: self.account_id.clone(),
+        //         borrow_asset_amount: accumulation_record.amount,
+        //     }
+        //     .emit();
+        // }
 
         self.position
             .borrow_asset_fees
