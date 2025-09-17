@@ -24,14 +24,6 @@ pub fn split_ok_1() {
     v2.map(|the_val| cvlr_satisfy!(*the_val != v));
 }
 
-#[no_mangle]
-#[inline(never)]
-pub fn foo() -> Box<str> {
-    unsafe {
-        let bytes = CERTORA_nondet_bytes(2);
-        String::from_raw_parts(bytes, 2, 2).into_boxed_str()
-    }
-}
 #[rule]
 pub fn accounts_can_be_neq() {
     // let a1: AccountId = AccountId::nondet();
@@ -39,41 +31,6 @@ pub fn accounts_can_be_neq() {
     let s = AccountId::nondet();
     let t = AccountId::nondet();
     cvlr_satisfy!(s != t);
-}
-
-#[inline(never)]
-pub fn id<T>(t: T) -> T {
-    t
-}
-
-// #[no_mangle]
-// pub fn unsafe_box_str_clone(b: &Box<str>) -> Box<str> {
-//     unsafe {
-//         let p = b.as_ptr();
-//         let bytes = CERTORA_nondet_bytes(b.len() as u32);
-//         std::ptr::copy(p, bytes, b.len());
-//         let new_s = nondet_bytes_sz(b.len());
-//         id(new_s.into_boxed_str())
-//     }
-// }
-
-#[no_mangle]
-#[inline(never)]
-pub fn unsafe_account_id_clone(a: &AccountId) -> AccountId {
-    unsafe {
-        let ai: u64 = std::mem::transmute(a.as_bytes());
-        std::mem::transmute(ai)
-    }
-}
-
-#[no_mangle]
-#[inline(never)]
-pub fn unsafe_account_id_eq(a: &AccountId, b: &AccountId) -> bool {
-    unsafe {
-        let ai: u64 = std::mem::transmute(a.as_bytes());
-        let bi: u64 = std::mem::transmute(b.as_bytes());
-        ai == bi
-    }
 }
 
 #[rule]
@@ -270,50 +227,3 @@ pub fn borrow_preserves_health() {
     //  cvlr_assert!(heath_post.is_healthy());
     cvlr_assert!(false);
 }
-
-// #[near(serializers=[])]
-// pub struct MyData {
-//     x: U64,
-//     y: U128
-// }
-
-// extern "C" {
-//     pub fn deserialize_MyData(p: *const u8, size: usize) -> MyData;
-//     pub fn serialize_MyData(p: &MyData, size: *mut usize, p: *mut [u8]);
-// }
-
-// impl borsh::BorshDeserialize for MyData {
-//     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-//         let mut v = Vec::new();
-//         let bytes = reader.read_to_end(&mut v)?;
-//         let pv: &[u8] = &v;
-//         unsafe {
-//             Ok(deserialize_MyData(pv.as_ptr(), bytes))
-//         }
-//     }
-// }
-
-// impl borsh::BorshSerialize for MyData {
-//     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-//         serialize_MyData
-//         Ok(())
-//     }
-// }
-
-// #[rule]
-// pub fn storage(k: u64, l: LookupMap<u64, MyData, Identity>) {
-//     let (_key, _elt) = LookupMap::<u64, MyData, Identity>::load_element(&l.prefix, &k);
-//     cvlr_assert!(false);
-// }
-
-// #[rule]
-// pub fn lookup1(k: u64, l: LookupMap<u64, u64>) {
-//     let _foo = l.get(&k);
-//     cvlr_assert!(false);
-// }
-
-// #[rule]
-// pub fn lookup2(k: AccountId, l: LookupMap<AccountId, u64>) {
-//     let _foo = l.get(&k);
-//     cvlr_assert!(false);
-// }
