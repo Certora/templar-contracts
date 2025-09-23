@@ -48,4 +48,5 @@ tokio.workspace = true
 workspace = true
 
 [features]
-certora = []
+certora = ["templar-common/certora", "templar-market-contract/certora"]
+

@@ -309,6 +309,7 @@ impl<'a> SupplyPositionGuard<'a> {
         let accumulation_record = self.calculate_yield(snapshot_limit);
         self.activate_incoming(accumulation_record.next_snapshot_index);
 
+        #[cfg(not(feature = "certora"))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::YieldAccumulated {
                 account_id: self.account_id.clone(),
@@ -413,6 +414,7 @@ impl<'a> SupplyPositionGuard<'a> {
 
         self.market.snapshot();
 
+        #[cfg(not(feature = "certora"))]
         if !amount.is_zero() {
             MarketEvent::SupplyDeposited {
                 account_id: self.account_id.clone(),

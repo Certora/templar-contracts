@@ -206,29 +206,11 @@ pub fn nondet_bytes_sz(sz: usize) -> String {
     }
 }
 
-impl TemplarNondet for Box<str> {
-    #[inline(never)]
-    fn nondet() -> Self {
-        // let sz = usize::nondet();
-        // cvlr_assume!(AccountId::MIN_LEN <= sz && sz <= AccountId::MAX_LEN);
-        let sz = 2;
-        let s = nondet_bytes_sz(sz);
-        id(s.into_boxed_str())
-    }
-}
-
-
-#[inline(never)]
-fn id<A>(a: A) -> A {
-    a
-}
-
 impl TemplarNondet for AccountId {
     #[inline(never)]
     fn nondet() -> Self {
         unsafe {
-            let bstr = Box::<str>::nondet();
-            std::mem::transmute(bstr)
+            std::mem::transmute(u64::nondet())
         }
     }
 }

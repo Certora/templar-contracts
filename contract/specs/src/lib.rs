@@ -7,7 +7,7 @@ use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
 use templar_common::market::Market;
 use templar_common::models::split_map::ApplyRule;
-use templar_common::supply::SupplyPositionGuard;
+use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
 use templar_common::{fee, models};
 
 #[rule]
@@ -34,12 +34,16 @@ pub fn accounts_can_be_neq() {
 }
 
 #[rule]
-pub fn add_incoming_sanity(mut supply_pos_guard: SupplyPositionGuard) {
+pub fn add_incoming_sanity() {
+    let account_id = AccountId::nondet();
+    let mut market = Market::nondet();
+    let position = SupplyPosition::nondet();
+    let mut supply_pos_guard = SupplyPositionGuard::new(&mut market, account_id, position);
     let amount = TemplarNondet::nondet();
     let block_ts = u64::nondet();
     let proof = supply_pos_guard.accumulate_yield();
     supply_pos_guard.record_deposit(proof, amount, block_ts);
-    cvlr_assert!(false);
+    cvlr_satisfy!(true);
 }
 
 #[rule]

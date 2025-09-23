@@ -41,7 +41,12 @@ declare_nondet!(
     FungibleAssetKind,
     nondet_choice!(
         Self::Nep141(AccountId::nondet()),
-        Self::Nep245 { contract_id: AccountId::nondet(), token_id: nondet_bytes_sz(3) }
+        Self::Nep245 { 
+            contract_id: AccountId::nondet(), 
+            token_id: unsafe {
+                std::mem::transmute([u32::nondet(), u32::nondet(), u32::nondet()])
+            }
+        }
     )
 );
 

@@ -52,3 +52,7 @@ name = "gas_report"
 
 [[example]]
 name = "receipt_gas"
+
+[features]
+default = ["certora"]
+certora = ["templar-common/certora"]
