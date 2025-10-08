@@ -1,4 +1,4 @@
-use cvlr::{cvlr_assert, cvlr_satisfy, rule};
+use cvlr::{clog, cvlr_assert, cvlr_satisfy, rule};
 
 use near_sdk::AccountId;
 
@@ -214,13 +214,13 @@ pub fn snapshot_with_yield_and_supplier_position() {
     let amount = borrow_amount.amount;
     let account = AccountId::nondet();
     let yield_pre;
-    let position = SupplyPosition::nondet();
+    let mut position = SupplyPosition::nondet();
     {
-        let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position.clone());
+        let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position);
 
         sp_guard.accumulate_yield(); // after this the yield is up-to-date
 
-        let position = sp_guard.inner();
+        position = sp_guard.inner().clone();
         yield_pre = position.borrow_asset_yield.total;
 
     }
@@ -234,6 +234,9 @@ pub fn snapshot_with_yield_and_supplier_position() {
     {
         let position = sp_guard.inner();
         let yield_post = position.borrow_asset_yield.total;
+        clog!(yield_post.amount.0);
+        clog!(yield_pre.amount.0);
+        clog!(amount.0);
         cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
     }
 }
