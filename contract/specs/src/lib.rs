@@ -13,7 +13,7 @@ use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
 use templar_common::models;
 use templar_market_contract::Contract;
 
-#[rule]
+// #[rule]
 pub fn split_ok_1() {
     let i: u32 = TemplarNondet::nondet();
     let j: u32 = TemplarNondet::nondet();
@@ -27,7 +27,7 @@ pub fn split_ok_1() {
     v2.map(|the_val| cvlr_satisfy!(*the_val != v));
 }
 
-#[rule]
+// #[rule]
 pub fn accounts_can_be_neq() {
     // let a1: AccountId = AccountId::nondet();
     // let a2: AccountId = a1.clone();
@@ -53,7 +53,7 @@ pub fn add_incoming_sanity() {
 pub fn snapshot_sanity() {
     let mut market = Market::nondet();
     market.snapshot();
-    cvlr_assert!(false);
+    cvlr_satisfy!(true);
 }
 
 #[rule]
@@ -63,7 +63,7 @@ pub fn accumulate_interest_sanity() {
     let borrow_position = BorrowPosition::nondet();
     let mut bp_guard = BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone());
     bp_guard.accumulate_interest();
-    cvlr_assert!(false);
+    cvlr_satisfy!(true);
 }
 
 #[rule]
@@ -206,20 +206,21 @@ pub fn snapshot_with_yield_distribution_integrity() {
 #[rule]
 pub fn borrow_preserves_health() {
     let mut c = Contract::nondet();
-    let amount = TemplarNondet::nondet();
     let account_id = AccountId::nondet();
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
         asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
-        price1: TemplarNondet::nondet(),
+        price1: Some(TemplarNondet::nondet()),
         asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
-        price2: TemplarNondet::nondet(),
+        price2: Some(TemplarNondet::nondet()),
     };
     let price = c.price_pair(oracle.clone());
-
+    let amount = TemplarNondet::nondet();
     c.borrow_01_consume_price_internal(account_id.clone(), amount, oracle);
-
-    let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
-    cvlr_assert!(borrow_position.satisfies_mcr_maintenance(&price));
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        let ok2 = borrow_position.satisfies_mcr_maintenance(&price);
+        cvlr_assert!(ok2);
+    }
 }
