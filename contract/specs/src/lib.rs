@@ -7,10 +7,10 @@ use models::templar_nondet::*;
 use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
 use templar_common::market::Market;
-use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
+use templar_common::models;
 use templar_market_contract::Contract;
 
 // #[rule]
@@ -159,35 +159,6 @@ pub fn accumulate_interest_integrity_1() {
     cvlr_assert!(fees_post_total >= fees_pre_total);
 }
 
-#[rule]
-pub fn snapshot_with_yield_and_supplier_position() {
-    let mut market = Market::nondet();
-    let borrow_amount = BorrowAssetAmount::nondet();
-    let amount = borrow_amount.amount;
-    let account = AccountId::nondet();
-    let yield_pre;
-    let position = SupplyPosition::nondet();
-    {
-        let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position.clone());
-
-        sp_guard.accumulate_yield(); // after this the yield is up-to-date
-
-        let position = sp_guard.inner();
-        yield_pre = position.borrow_asset_yield.total;
-
-    }
-    
-    market.snapshot_with_yield_distribution(borrow_amount);
-
-    let mut sp_guard = SupplyPositionGuard::new(&mut market, account, position);
-    sp_guard.accumulate_yield(); // after this the yield is up-to-date
-
-    {
-        let position = sp_guard.inner();
-        let yield_post = position.borrow_asset_yield.total;
-        cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
-    }
-}
 
 #[rule]
 pub fn snapshot_with_yield_distribution_integrity() {
@@ -220,15 +191,9 @@ pub fn borrow_preserves_health() {
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
-        asset1: c
-            .configuration
-            .price_oracle_configuration
-            .borrow_asset_price_id,
+        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
         price1: Some(TemplarNondet::nondet()),
-        asset2: c
-            .configuration
-            .price_oracle_configuration
-            .collateral_asset_price_id,
+        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
     };
     let price = c.price_pair(oracle.clone());
@@ -240,3 +205,74 @@ pub fn borrow_preserves_health() {
         cvlr_assert!(ok2);
     }
 }
+
+
+#[rule]
+pub fn snapshot_with_yield_and_supplier_position() {
+    let mut market = Market::nondet();
+    let borrow_amount = BorrowAssetAmount::nondet();
+    let amount = borrow_amount.amount;
+    let account = AccountId::nondet();
+    let yield_pre;
+    let position = SupplyPosition::nondet();
+    {
+        let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position.clone());
+
+        sp_guard.accumulate_yield(); // after this the yield is up-to-date
+
+        let position = sp_guard.inner();
+        yield_pre = position.borrow_asset_yield.total;
+
+    }
+    
+    market.snapshot_with_yield_distribution(borrow_amount);
+
+    let mut sp_guard = SupplyPositionGuard::new(&mut market, account, position);
+    sp_guard.accumulate_yield(); // after this the yield is up-to-date
+
+
+    {
+        let position = sp_guard.inner();
+        let yield_post = position.borrow_asset_yield.total;
+        cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
+    }
+}
+
+
+/*
+rule1 () {
+    health_before
+    assume(health_before is good)
+    borrow() // comment out the promise part at the end that calls promise stuff
+    health_after
+    assert(health_after is good)
+}
+
+rule2 () {
+    health_before
+    assume(health_before is good)
+    retrieve_price_pair()
+    borrow_01_consume_price() // comment out the promise part at the end
+    health_after
+    assert(health_after is good)
+}
+
+rule2.5 () {
+    health_before
+    assume(health_before is good)
+    retrieve_price_pair()
+    health_after
+    assert(health_after is good)
+}
+
+rule3 () {
+    health_before
+    assume(health_before is good)
+    transfer()
+    borrow_02_finalize() // comment out the promise part at the end
+    health_after
+    assert(health_after is good)
+}
+
+*/
+

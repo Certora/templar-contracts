@@ -257,9 +257,9 @@ pub mod error {
 }
 
 pub struct BorrowPositionRef<M> {
-    market: M,
+    pub market: M,
     account_id: AccountId,
-    position: BorrowPosition,
+    pub position: BorrowPosition,
 }
 
 impl<M> BorrowPositionRef<M> {
@@ -298,7 +298,7 @@ impl<M: Deref<Target = Market>> BorrowPositionRef<M> {
         self.position.borrow_asset_fees.pending_estimate = pending_estimate;
     }
 
-    pub(crate) fn calculate_interest(
+pub(crate) fn calculate_interest(
         &self,
         snapshot_limit: u32,
     ) -> AccumulationRecord<BorrowAsset> {
@@ -417,7 +417,7 @@ impl<M: Deref<Target = Market>> BorrowPositionRef<M> {
     }
 }
 
-pub struct BorrowPositionGuard<'a>(BorrowPositionRef<&'a mut Market>);
+pub struct BorrowPositionGuard<'a>(pub BorrowPositionRef<&'a mut Market>);
 
 impl Drop for BorrowPositionGuard<'_> {
     #[inline(never)]
@@ -583,6 +583,7 @@ impl<'a> BorrowPositionGuard<'a> {
          } else { 
             self.calculate_interest(snapshot_limit)
          };
+
 
         #[cfg(not(feature = "certora"))]
         if !accumulation_record.amount.is_zero() {

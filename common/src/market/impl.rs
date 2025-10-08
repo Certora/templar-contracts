@@ -199,7 +199,6 @@ impl Market {
 
             self.finalized_snapshots.push(snapshot);
         }
-
         self.finalized_snapshots.len()
     }
 
