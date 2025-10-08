@@ -195,6 +195,7 @@ pub fn borrow_preserves_health() {
         price1: Some(TemplarNondet::nondet()),
         asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
     };
     let price = c.price_pair(oracle.clone());
     let amount = TemplarNondet::nondet();
@@ -205,7 +206,6 @@ pub fn borrow_preserves_health() {
         cvlr_assert!(ok2);
     }
 }
-
 
 #[rule]
 pub fn snapshot_with_yield_and_supplier_position() {
@@ -236,4 +236,74 @@ pub fn snapshot_with_yield_and_supplier_position() {
         let yield_post = position.borrow_asset_yield.total;
         cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
     }
+}
+
+#[rule]
+pub fn withdraw_preserves_health() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+    c.withdraw_collateral_01_consume_price_internal(account_id.clone(), amount, oracle);
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        let ok2 = borrow_position.satisfies_mcr_maintenance(&price);
+        cvlr_assert!(ok2);
+    }
+}
+
+#[rule]
+pub fn withdraw_preserves_health_sanity() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+    c.withdraw_collateral_01_consume_price_internal(account_id.clone(), amount, oracle);
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        borrow_position.satisfies_mcr_maintenance(&price);
+    }
+        cvlr_satisfy!(true);
+}
+
+
+#[rule]
+pub fn borrow_preserves_health_sanity() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+    c.borrow_01_consume_price_internal(account_id.clone(), amount, oracle);
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        borrow_position.satisfies_mcr_maintenance(&price);
+    }
+    cvlr_satisfy!(true);
 }

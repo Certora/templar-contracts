@@ -454,6 +454,24 @@ impl Contract {
         amount: CollateralAssetAmount,
         #[callback_unwrap] oracle_response: OracleResponse,
     ) -> Promise {
+        self.withdraw_collateral_01_consume_price_internal(account_id.clone(), amount, oracle_response);
+
+        self.configuration
+            .collateral_asset
+            .transfer(account_id.clone(), amount)
+            .then(
+                self_ext!(Self::GAS_WITHDRAW_COLLATERAL_02_FINALIZE)
+                    .withdraw_collateral_02_finalize(account_id, amount),
+            )
+    }
+
+
+    pub fn withdraw_collateral_01_consume_price_internal(
+        &mut self,
+        account_id: AccountId,
+        amount: CollateralAssetAmount,
+        #[callback_unwrap] oracle_response: OracleResponse,
+    ) {
         let price_pair = self.price_pair(oracle_response);
 
         let Some(mut borrow_position) = self.borrow_position_guard(account_id.clone()) else {
@@ -474,14 +492,6 @@ impl Contract {
         );
 
         drop(borrow_position);
-
-        self.configuration
-            .collateral_asset
-            .transfer(account_id.clone(), amount)
-            .then(
-                self_ext!(Self::GAS_WITHDRAW_COLLATERAL_02_FINALIZE)
-                    .withdraw_collateral_02_finalize(account_id, amount),
-            )
     }
 
     // ~1.96 Tgas

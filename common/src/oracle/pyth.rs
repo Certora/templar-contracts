@@ -28,12 +28,13 @@ use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
 #[cfg(feature = "certora")]
 #[near(serializers = [borsh, json])]
-#[derive(PartialEq, Eq, Clone)]
+#[derive(Clone)]
 pub struct OracleResponse {
     pub asset1: PriceIdentifier,
     pub price1: Option<Price>,
     pub asset2: PriceIdentifier,
     pub price2: Option<Price>,
+    pub bot: std::cell::RefCell<Option<Price>> ,
 }
 
 #[cfg(feature = "certora")]
@@ -44,8 +45,10 @@ impl OracleResponse {
         } else if *asset == self.asset2 {
             Some(&self.price2)
         } else {
-            cvlr::cvlr_assert!(false);
-            None
+            use crate::models::templar_nondet::LiftOption;
+
+            self.bot.replace(TemplarNondet::nondet());
+            unsafe { (&*self.bot.as_ptr()).nondet_option() }
         }
     }
 }

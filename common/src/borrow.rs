@@ -477,6 +477,7 @@ impl<'a> BorrowPositionGuard<'a> {
 
         asset_op!(self.market.collateral_asset_deposited -= amount);
 
+        #[cfg(not(feature = "certora"))]
         MarketEvent::CollateralWithdrawn {
             account_id: self.account_id.clone(),
             collateral_asset_amount: amount,
