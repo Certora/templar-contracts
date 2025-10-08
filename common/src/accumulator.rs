@@ -8,7 +8,7 @@ use crate::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
 pub struct Accumulator<T: AssetClass> {
-    total: FungibleAssetAmount<T>,
+    pub total: FungibleAssetAmount<T>,
     fraction_as_u128_dividend: U128,
     pub next_snapshot_index: u32,
     #[borsh(skip)]

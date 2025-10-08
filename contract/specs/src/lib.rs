@@ -7,10 +7,10 @@ use models::templar_nondet::*;
 use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
 use templar_common::market::Market;
+use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_common::models;
 use templar_market_contract::Contract;
 
 // #[rule]
@@ -160,23 +160,33 @@ pub fn accumulate_interest_integrity_1() {
 }
 
 #[rule]
-pub fn accumulate_interest_integrity_2() {
-    let mut borrow_position = BorrowPosition::nondet();
-
+pub fn snapshot_with_yield_and_supplier_position() {
     let mut market = Market::nondet();
-    let account_id = AccountId::nondet();
+    let borrow_amount = BorrowAssetAmount::nondet();
+    let amount = borrow_amount.amount;
+    let account = AccountId::nondet();
+    let yield_pre;
+    let position = SupplyPosition::nondet();
+    {
+        let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position.clone());
+
+        sp_guard.accumulate_yield(); // after this the yield is up-to-date
+
+        let position = sp_guard.inner();
+        yield_pre = position.borrow_asset_yield.total;
+
+    }
+    
+    market.snapshot_with_yield_distribution(borrow_amount);
+
+    let mut sp_guard = SupplyPositionGuard::new(&mut market, account, position);
+    sp_guard.accumulate_yield(); // after this the yield is up-to-date
 
     {
-        let mut bp_guard = BorrowPositionGuard::new(&mut market, account_id, borrow_position);
-        bp_guard.accumulate_interest();
-        borrow_position = bp_guard.inner().clone();
+        let position = sp_guard.inner();
+        let yield_post = position.borrow_asset_yield.total;
+        cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
     }
-
-    let length_snapshot_list = market.finalized_snapshots.len();
-
-    let fees_post = borrow_position.borrow_asset_fees;
-    let fees_next_snapshot_index = fees_post.next_snapshot_index;
-    cvlr_assert!(fees_next_snapshot_index == length_snapshot_list);
 }
 
 #[rule]
@@ -210,9 +220,15 @@ pub fn borrow_preserves_health() {
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
-        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
         price1: Some(TemplarNondet::nondet()),
-        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
     };
     let price = c.price_pair(oracle.clone());
