@@ -1,17 +1,18 @@
-use cvlr::{clog, cvlr_assert, cvlr_satisfy, rule};
+use cvlr::{clog, cvlr_assert, cvlr_satisfy, nondet, rule};
 
-use near_sdk::AccountId;
+use near_sdk::{ AccountId};
 
 use models::templar_nondet::*;
 
 use templar_common::asset::BorrowAssetAmount;
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
-use templar_common::market::Market;
+use templar_common::market::{Market, WithdrawalResolution};
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_common::models;
+use templar_common::{asset_op, models};
 use templar_market_contract::Contract;
+
 
 // #[rule]
 pub fn split_ok_1() {
@@ -159,7 +160,6 @@ pub fn accumulate_interest_integrity_1() {
     cvlr_assert!(fees_post_total >= fees_pre_total);
 }
 
-
 #[rule]
 pub fn snapshot_with_yield_distribution_integrity() {
     let amount = BorrowAssetAmount::nondet();
@@ -185,26 +185,31 @@ pub fn snapshot_with_yield_distribution_integrity() {
 }
 
 #[rule]
-pub fn borrow_preserves_health() {
+pub fn withdraws_decrease_available_correctly() {
+    let market = Market::nondet();
     let mut c = Contract::nondet();
-    let account_id = AccountId::nondet();
-    c.market.focus_borrow_positions(account_id.clone());
+	let available_pre = market.get_borrow_asset_available_to_borrow().amount.0;
+	
+    let withdrawal_resolution = WithdrawalResolution::nondet();
+    let expected_success: bool = nondet();
+	let withdrawl_request = c.withdrawal_queue.try_pop().unwrap();
+	let amount_withdrawn = withdrawl_request.1.amount.0;
+	
+	c.execute_next_supply_withdrawal_request_01_finalize(withdrawal_resolution, expected_success);
+	
+	let available_post = market.get_borrow_asset_available_to_borrow().amount.0;
+	cvlr_assert!(available_pre == available_post - amount_withdrawn);
+}
 
-    let oracle = OracleResponse {
-        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
-        price1: Some(TemplarNondet::nondet()),
-        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
-        price2: Some(TemplarNondet::nondet()),
-        bot: None.into(),
-    };
-    let price = c.price_pair(oracle.clone());
-    let amount = TemplarNondet::nondet();
-    c.borrow_01_consume_price_internal(account_id.clone(), amount, oracle);
-    {
-        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
-        let ok2 = borrow_position.satisfies_mcr_maintenance(&price);
-        cvlr_assert!(ok2);
-    }
+// timing out, needs investigation
+#[rule]
+pub fn double_borrow_fails() {
+    let market = Market::nondet();
+    let c = Contract::nondet();
+    let max_amount = market.configuration.borrow_range.maximum.unwrap();
+    c.compute_amount(max_amount);
+    c.compute_amount(max_amount);
+    cvlr_assert!(false);
 }
 
 #[rule]
@@ -222,14 +227,12 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
         position = sp_guard.inner().clone();
         yield_pre = position.borrow_asset_yield.total;
-
     }
-    
+
     market.snapshot_with_yield_distribution(borrow_amount);
 
     let mut sp_guard = SupplyPositionGuard::new(&mut market, account, position);
     sp_guard.accumulate_yield(); // after this the yield is up-to-date
-
 
     {
         let position = sp_guard.inner();
@@ -242,15 +245,50 @@ pub fn snapshot_with_yield_and_supplier_position() {
 }
 
 #[rule]
+pub fn borrow_preserves_health() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+    c.borrow_01_consume_price_internal(account_id.clone(), amount, oracle);
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        let ok2 = borrow_position.satisfies_mcr_maintenance(&price);
+        cvlr_assert!(ok2);
+    }
+}
+
+#[rule]
 pub fn withdraw_preserves_health() {
     let mut c = Contract::nondet();
     let account_id = AccountId::nondet();
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
-        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
         price1: Some(TemplarNondet::nondet()),
-        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
         bot: None.into(),
     };
@@ -271,9 +309,15 @@ pub fn withdraw_preserves_health_sanity() {
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
-        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
         price1: Some(TemplarNondet::nondet()),
-        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
         bot: None.into(),
     };
@@ -284,9 +328,8 @@ pub fn withdraw_preserves_health_sanity() {
         let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
         borrow_position.satisfies_mcr_maintenance(&price);
     }
-        cvlr_satisfy!(true);
+    cvlr_satisfy!(true);
 }
-
 
 #[rule]
 pub fn borrow_preserves_health_sanity() {
@@ -295,9 +338,15 @@ pub fn borrow_preserves_health_sanity() {
     c.market.focus_borrow_positions(account_id.clone());
 
     let oracle = OracleResponse {
-        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
         price1: Some(TemplarNondet::nondet()),
-        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
         price2: Some(TemplarNondet::nondet()),
         bot: None.into(),
     };

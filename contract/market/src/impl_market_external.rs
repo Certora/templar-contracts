@@ -87,6 +87,20 @@ impl MarketExternalInterface for Contract {
         ))
     }
 
+    #[cfg(feature = "certora")]
+    fn borrow(&mut self, amount: BorrowAssetAmount) -> Promise {
+        #[cfg(feature = "certora")]
+        let account_id = self.compute_amount(amount);
+        self.configuration
+            .price_oracle_configuration
+            .retrieve_price_pair()
+            .then(
+                self_ext!(Self::GAS_BORROW_01_CONSUME_PRICE)
+                    .borrow_01_consume_price(account_id, amount),
+            )
+    }
+
+    #[cfg(not(feature = "certora"))]
     fn borrow(&mut self, amount: BorrowAssetAmount) -> Promise {
         require!(!amount.is_zero(), "Borrow amount must be greater than zero");
 
@@ -106,7 +120,6 @@ impl MarketExternalInterface for Contract {
             "New borrow position is outside of allowable range",
         );
 
-        // check here the state
         self.configuration
             .price_oracle_configuration
             .retrieve_price_pair()

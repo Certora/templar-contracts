@@ -14,15 +14,37 @@ use crate::{Contract, ContractExt, ReturnStyle};
 
 /// Internal helpers.
 impl Contract {
+    #[cfg(feature = "certora")]
+    pub fn compute_amount(&self, amount: BorrowAssetAmount) -> AccountId {
+        require!(!amount.is_zero(), "Borrow amount must be greater than zero");
+
+        let account_id = env::predecessor_account_id();
+
+        let proposed_amount =
+            if let Some(borrow_position) = self.borrow_position_ref(account_id.clone()) {
+                let mut borrow_principal = borrow_position.inner().get_borrow_asset_principal();
+                asset_op!(borrow_principal += amount);
+                borrow_principal
+            } else {
+                amount
+            };
+
+        require!(
+            self.configuration.borrow_range.contains(proposed_amount),
+            "New borrow position is outside of allowable range",
+        );
+        return account_id;
+    }
+
     pub fn price_pair(&self, oracle_response: OracleResponse) -> PricePair {
         self.configuration
             .price_oracle_configuration
             .create_price_pair(&oracle_response)
             .unwrap_or_else(|e| {
                 if cfg!(feature = "certora") {
-                    panic!("price_pair") 
-                } else { 
-                    env::panic_str(&e.to_string()) 
+                    panic!("price_pair")
+                } else {
+                    env::panic_str(&e.to_string())
                 }
             })
     }
@@ -171,9 +193,9 @@ impl Contract {
         amount: BorrowAssetAmount,
         #[callback_unwrap] oracle_response: OracleResponse,
     ) -> Promise {
-        let fees = self.borrow_01_consume_price_internal(account_id.clone(), amount, oracle_response);
+        let fees =
+            self.borrow_01_consume_price_internal(account_id.clone(), amount, oracle_response);
 
-        // check state here
         self.configuration
             .borrow_asset
             .transfer(account_id.clone(), amount)
@@ -182,7 +204,7 @@ impl Contract {
                     .borrow_02_finalize(account_id, amount, fees),
             )
     }
-    
+
     pub fn borrow_01_consume_price_internal(
         &mut self,
         account_id: AccountId,
@@ -230,7 +252,7 @@ impl Contract {
         drop(borrow_position);
 
         fees
-    } 
+    }
 
     pub const GAS_BORROW_02_FINALIZE: Gas = Gas::from_tgas(9);
 
@@ -245,7 +267,8 @@ impl Contract {
             env::panic_str("Invariant violation: borrow position does not exist after transfer.");
         };
 
-        let proof: templar_common::borrow::InterestAccumulationProof = borrow_position.accumulate_interest();
+        let proof: templar_common::borrow::InterestAccumulationProof =
+            borrow_position.accumulate_interest();
         borrow_position.record_borrow_asset_in_flight_end(proof, amount, fees);
 
         // Even if the promise is not fulfilled, the above should happen.
@@ -454,7 +477,11 @@ impl Contract {
         amount: CollateralAssetAmount,
         #[callback_unwrap] oracle_response: OracleResponse,
     ) -> Promise {
-        self.withdraw_collateral_01_consume_price_internal(account_id.clone(), amount, oracle_response);
+        self.withdraw_collateral_01_consume_price_internal(
+            account_id.clone(),
+            amount,
+            oracle_response,
+        );
 
         self.configuration
             .collateral_asset
@@ -464,7 +491,6 @@ impl Contract {
                     .withdraw_collateral_02_finalize(account_id, amount),
             )
     }
-
 
     pub fn withdraw_collateral_01_consume_price_internal(
         &mut self,

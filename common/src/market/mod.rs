@@ -90,3 +90,13 @@ pub struct WithdrawalResolution {
     pub amount_to_account: BorrowAssetAmount,
     pub amount_to_fees: BorrowAssetAmount,
 }
+
+impl TemplarNondet for WithdrawalResolution {
+    fn nondet() -> Self {
+        WithdrawalResolution {
+            account_id: TemplarNondet::nondet(),
+            amount_to_account: TemplarNondet::nondet(),
+            amount_to_fees: TemplarNondet::nondet()
+        }
+    }
+}
