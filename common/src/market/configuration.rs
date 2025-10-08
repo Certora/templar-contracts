@@ -294,13 +294,17 @@ impl MarketConfiguration {
         borrow_position: &BorrowPosition,
         block_timestamp_ms: u64,
     ) -> bool {
-        let Some(U64(maximum_duration_ms)) = self.borrow_maximum_duration_ms else {
-            return true;
-        };
-        borrow_position
-            .started_at_block_timestamp_ms
-            .and_then(|U64(started_at_ms)| block_timestamp_ms.checked_sub(started_at_ms))
-            .is_none_or(|duration_ms| duration_ms <= maximum_duration_ms)
+        if cfg!(feature = "certora") {
+            bool::nondet()
+        } else {
+            let Some(U64(maximum_duration_ms)) = self.borrow_maximum_duration_ms else {
+                return true;
+            };
+            borrow_position
+                .started_at_block_timestamp_ms
+                .and_then(|U64(started_at_ms)| block_timestamp_ms.checked_sub(started_at_ms))
+                .is_none_or(|duration_ms| duration_ms <= maximum_duration_ms)
+        }
     }
 
     pub fn satisfies_mcr_maintenance(
@@ -320,11 +324,15 @@ impl MarketConfiguration {
         borrow_position: &BorrowPosition,
         oracle_price_proof: &PricePair,
     ) -> bool {
-        satisfies_minimum_collateral_ratio(
-            self.borrow_mcr_liquidation,
-            borrow_position,
-            oracle_price_proof,
-        )
+        if cfg!(feature = "certora") {
+            TemplarNondet::nondet()
+        } else {
+            satisfies_minimum_collateral_ratio(
+                self.borrow_mcr_liquidation,
+                borrow_position,
+                oracle_price_proof,
+            )
+        }
     }
 
     pub fn minimum_acceptable_liquidation_amount(

@@ -1,14 +1,17 @@
-use cvlr::{cvlr_assert, cvlr_assume};
-use cvlr::{cvlr_satisfy, rule};
-use models::templar_nondet::*;
+use cvlr::{cvlr_assert, cvlr_satisfy, rule};
+
 use near_sdk::AccountId;
 
+use models::templar_nondet::*;
+
 use templar_common::asset::BorrowAssetAmount;
-use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
+use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
 use templar_common::market::Market;
 use templar_common::models::split_map::ApplyRule;
+use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_common::{fee, models};
+use templar_common::models;
+use templar_market_contract::Contract;
 
 #[rule]
 pub fn split_ok_1() {
@@ -202,32 +205,21 @@ pub fn snapshot_with_yield_distribution_integrity() {
 
 #[rule]
 pub fn borrow_preserves_health() {
-    let mut market = Market::nondet();
+    let mut c = Contract::nondet();
+    let amount = TemplarNondet::nondet();
     let account_id = AccountId::nondet();
-    let amount = BorrowAssetAmount::nondet();
-    let fees = BorrowAssetAmount::nondet();
-    let borrow_position = BorrowPosition::nondet();
-    let price_pair = TemplarNondet::nondet();
-    let block_ts = u64::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
 
-    let heath_pre = market
-        .configuration
-        .borrow_status(&borrow_position, &price_pair, block_ts);
+    let oracle = OracleResponse {
+        asset1: c.configuration.price_oracle_configuration.borrow_asset_price_id,
+        price1: TemplarNondet::nondet(),
+        asset2: c.configuration.price_oracle_configuration.collateral_asset_price_id,
+        price2: TemplarNondet::nondet(),
+    };
+    let price = c.price_pair(oracle.clone());
 
-    {
-        let mut bp_guard =
-            BorrowPositionGuard::new(&mut market, account_id, borrow_position.clone());
+    c.borrow_01_consume_price_internal(account_id.clone(), amount, oracle);
 
-        let proof = InterestAccumulationProof::nondet();
-        cvlr_assume!(heath_pre.is_healthy());
-
-        bp_guard.record_borrow_asset_withdrawal(proof, amount, fees);
-    }
-
-    // let heath_post = market
-    //     .configuration
-    //     .borrow_status(&borrow_position, &price_pair, block_ts);
-
-    //  cvlr_assert!(heath_post.is_healthy());
-    cvlr_assert!(false);
+    let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+    cvlr_assert!(borrow_position.satisfies_mcr_maintenance(&price));
 }

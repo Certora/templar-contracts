@@ -98,7 +98,11 @@ impl Linear {
 
 impl UsageCurve for Linear {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        usage_ratio * (self.top - self.base) + self.base
+        if cfg!(feature = "certora") {
+            Decimal::nondet()
+        } else {
+            usage_ratio * (self.top - self.base) + self.base
+        }
     }
 }
 
@@ -140,15 +144,19 @@ impl Piecewise {
 
 impl UsageCurve for Piecewise {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        require!(
-            usage_ratio <= Decimal::ONE,
-            "Invariant violation: Usage ratio cannot be over 100%.",
-        );
-
-        if usage_ratio < self.params.optimal {
-            self.params.rate_1 * usage_ratio + self.params.base
+        if cfg!(feature = "certora") {
+            Decimal::nondet()
         } else {
-            self.params.rate_2 * usage_ratio - self.i_negative_rate_2_b
+            require!(
+                usage_ratio <= Decimal::ONE,
+                "Invariant violation: Usage ratio cannot be over 100%.",
+            );
+
+            if usage_ratio < self.params.optimal {
+                self.params.rate_1 * usage_ratio + self.params.base
+            } else {
+                self.params.rate_2 * usage_ratio - self.i_negative_rate_2_b
+            }
         }
     }
 }
@@ -225,23 +233,18 @@ impl Exponential2 {
 
 impl UsageCurve for Exponential2 {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        return Decimal::nondet();
-
-        // #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
-        // #[cfg(feature = "certora")]
-        // {
-        //     return Decimal::ZERO;
-        // }
-        // #[cfg(not(feature = "certora"))]
-        // {
-        //     require!(
-        //         usage_ratio <= Decimal::ONE,
-        //         "Invariant violation: Usage ratio cannot be over 100%.",
-        //     );
-        //     return self.params.base
-        //         + self.i_factor
-        //             * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32);
-        // }
+        if cfg!(feature = "certora") {
+            Decimal::nondet()
+        } else {
+            require!(
+                usage_ratio <= Decimal::ONE,
+                "Invariant violation: Usage ratio cannot be over 100%.",
+            );
+            #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
+            return self.params.base
+                + self.i_factor
+                    * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32);
+        }
     }
 }
 

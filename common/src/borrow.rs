@@ -63,6 +63,11 @@ pub struct BorrowPosition {
     pub borrow_asset_fees: Accumulator<BorrowAsset>,
     pub temporary_lock: BorrowAssetAmount,
     pub is_liquidation_locked: bool,
+    #[cfg(feature = "certora")]
+    // if Some(p) then the position satisfies mcr_maintenance.for p
+    // meaningless if not Some(p). should be set to None whenever
+    // the struct is modified
+    pub price_pair_ok: Option<PricePair>,
 }
 
 
@@ -79,6 +84,8 @@ impl BorrowPosition {
             borrow_asset_fees: Accumulator::new(current_snapshot_index),
             temporary_lock: 0.into(),
             is_liquidation_locked: false,
+            #[cfg(feature = "certora")]
+            price_pair_ok: TemplarNondet::nondet()
         }
     }
 
@@ -97,6 +104,8 @@ impl BorrowPosition {
             borrow_asset_fees,
             temporary_lock,
             is_liquidation_locked,
+            #[cfg(feature = "certora")]
+            price_pair_ok: TemplarNondet::nondet()
         }
     }
 
@@ -106,6 +115,10 @@ impl BorrowPosition {
         self.collateral_asset_deposit = 0.into();
         self.borrow_asset_principal = 0.into();
         self.borrow_asset_fees.clear(current_snapshot_index);
+        #[cfg(feature = "certora")]
+        {
+            self.price_pair_ok = None;
+        }
     }
 
     pub fn get_borrow_asset_principal(&self) -> BorrowAssetAmount {
@@ -135,6 +148,10 @@ impl BorrowPosition {
         &mut self,
         amount: CollateralAssetAmount,
     ) -> Option<()> {
+        #[cfg(feature = "certora")]
+        {
+            self.price_pair_ok = None;
+        }
         self.collateral_asset_deposit.join(amount)
     }
 
@@ -142,6 +159,10 @@ impl BorrowPosition {
         &mut self,
         amount: CollateralAssetAmount,
     ) -> Option<CollateralAssetAmount> {
+        #[cfg(feature = "certora")]
+        {
+            self.price_pair_ok = None;
+        }
         self.collateral_asset_deposit.split(amount)
     }
 
@@ -152,6 +173,10 @@ impl BorrowPosition {
         amount: BorrowAssetAmount,
         block_timestamp_ms: u64,
     ) -> Option<()> {
+        #[cfg(feature = "certora")]
+        {
+            self.price_pair_ok = None;
+        }
         if self.started_at_block_timestamp_ms.is_none()
             || self.get_total_borrow_asset_liability().is_zero()
         {
@@ -202,6 +227,11 @@ impl BorrowPosition {
         if self.borrow_asset_principal.is_zero() {
             // fully paid off
             self.started_at_block_timestamp_ms = None;
+        }
+
+        #[cfg(feature = "certora")]
+        {
+            self.price_pair_ok = None;
         }
 
         Ok(LiabilityReduction {
@@ -338,7 +368,31 @@ impl<M: Deref<Target = Market>> BorrowPositionRef<M> {
             .is_liquidation()
     }
 
-    pub fn satisfies_mcr_maintenance(&self, price_pair: &PricePair) -> bool {
+    #[cfg(feature = "certora")]
+    pub fn satisfies_mcr_maintenance(
+        &mut self, 
+        price_pair: &PricePair
+    ) -> bool {
+        #[cfg(feature = "certora")]
+        {
+            if let Some(ref pair) = self.position.price_pair_ok {
+                if pair == price_pair {
+                    return true
+                }
+            }
+            let result = bool::nondet();
+            if result {
+                self.position.price_pair_ok = Some(price_pair.clone())
+            }
+            result
+        }
+    }
+
+    #[cfg(not(feature = "certora"))]
+    pub fn satisfies_mcr_maintenance(
+        &self, 
+        price_pair: &PricePair
+    ) -> bool {
         self.market
             .configuration
             .satisfies_mcr_maintenance(&self.position, price_pair)
@@ -366,6 +420,7 @@ impl<M: Deref<Target = Market>> BorrowPositionRef<M> {
 pub struct BorrowPositionGuard<'a>(BorrowPositionRef<&'a mut Market>);
 
 impl Drop for BorrowPositionGuard<'_> {
+    #[inline(never)]
     fn drop(&mut self) {
         self.0
             .market
@@ -469,13 +524,14 @@ impl<'a> BorrowPositionGuard<'a> {
             .unwrap_or_else(|| env::panic_str("Increase borrow asset principal overflow"));
 
         asset_op!(self.market.borrow_asset_borrowed += amount);
-        // self.market.snapshot();
+        self.market.snapshot();
 
-        // MarketEvent::BorrowWithdrawn {
-        //     account_id: self.account_id.clone(),
-        //     borrow_asset_amount: amount,
-        // }
-        // .emit();
+        #[cfg(not(feature = "certora"))]
+        MarketEvent::BorrowWithdrawn {
+            account_id: self.account_id.clone(),
+            borrow_asset_amount: amount,
+        }
+        .emit();
     }
 
     /// Returns the amount that is left over after repaying the whole
@@ -522,7 +578,11 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        let accumulation_record = AccumulationRecord::nondet(); //self.calculate_interest(snapshot_limit);
+        let accumulation_record = if cfg!(feature = "certora") {
+            AccumulationRecord::nondet()
+         } else { 
+            self.calculate_interest(snapshot_limit)
+         };
 
         #[cfg(not(feature = "certora"))]
         if !accumulation_record.amount.is_zero() {
@@ -533,6 +593,10 @@ impl<'a> BorrowPositionGuard<'a> {
             .emit();
         }
 
+        #[cfg(feature = "certora")]
+        { 
+          self.position.price_pair_ok = None; 
+        }
         self.position
             .borrow_asset_fees
             .accumulate(accumulation_record);

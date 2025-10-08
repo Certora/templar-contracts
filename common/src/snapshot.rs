@@ -64,13 +64,18 @@ impl Snapshot {
     }
 
     pub fn usage_ratio(&self) -> Decimal {
-        if self.borrow_asset_deposited_active.is_zero() || self.borrow_asset_borrowed.is_zero() {
-            Decimal::ZERO
-        } else if self.borrow_asset_borrowed >= self.borrow_asset_deposited_active {
-            Decimal::ONE
-        } else {
-            Decimal::from(self.borrow_asset_borrowed)
-                / Decimal::from(self.borrow_asset_deposited_active)
+        #[cfg(feature = "certora")]
+        { Decimal::nondet() }
+        #[cfg(not(feature = "certora"))]
+        {
+            if self.borrow_asset_deposited_active.is_zero() || self.borrow_asset_borrowed.is_zero() {
+                Decimal::ZERO
+            } else if self.borrow_asset_borrowed >= self.borrow_asset_deposited_active {
+                Decimal::ONE
+            } else {
+                Decimal::from(self.borrow_asset_borrowed)
+                    / Decimal::from(self.borrow_asset_deposited_active)
+            }
         }
     }
 

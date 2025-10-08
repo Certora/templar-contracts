@@ -45,19 +45,31 @@ where
         UnorderedMap(SplitMap::new(near_sdk::collections::UnorderedMap::new(prefix)))
     }
 
+    pub fn focus(&mut self, k: K) {
+        self.0.split(k);
+    }
+
+
     pub fn iter(&self) -> Iter<'_, K, V> {
         Iter::default()
     }
 
-    pub fn get(&self, _k: &K) -> Option<V> {
-        TemplarNondet::nondet()
+    #[inline(never)]
+    pub fn get(&self, k: &K) -> Option<V> {
+        if self.0.the_x == *k { 
+            self.0.the_v.clone()
+        } else { 
+            TemplarNondet::nondet()
+        }
     }
 
     pub fn remove(&mut self, _k: &K) -> Option<V> {
         TemplarNondet::nondet()
     }
 
-    pub fn insert(&mut self, _k: &K, _v: &V) {
-
+    pub fn insert(&mut self, k: &K, v: &V) {
+        if self.0.the_x == *k {
+            self.0.the_v.replace(v.clone());
+        }
     }
 }

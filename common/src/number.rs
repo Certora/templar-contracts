@@ -271,24 +271,32 @@ impl Decimal {
     }
 
     pub fn to_u128_floor(self) -> Option<u128> {
-        let truncated = self.repr >> FRACTIONAL_BITS;
-        if truncated.bits() <= 128 {
-            Some(truncated.as_u128())
+        if cfg!(feature = "certora") {
+            TemplarNondet::nondet()
         } else {
-            None
+            let truncated = self.repr >> FRACTIONAL_BITS;
+            if truncated.bits() <= 128 {
+                Some(truncated.as_u128())
+            } else {
+                None
+            }
         }
     }
 
     pub fn to_u128_ceil(self) -> Option<u128> {
-        let truncated = self.repr >> FRACTIONAL_BITS;
-        if truncated.bits() <= 128 {
-            if self.fractional_part().is_zero() {
-                Some(truncated.as_u128())
-            } else {
-                truncated.as_u128().checked_add(1)
-            }
+        if cfg!(feature = "certora") {
+            TemplarNondet::nondet()
         } else {
-            None
+            let truncated = self.repr >> FRACTIONAL_BITS;
+            if truncated.bits() <= 128 {
+                if self.fractional_part().is_zero() {
+                    Some(truncated.as_u128())
+                } else {
+                    truncated.as_u128().checked_add(1)
+                }
+            } else {
+                None
+            }
         }
     }
 
@@ -446,8 +454,12 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn sub(self, rhs: $t) -> Self::Output {
-                Decimal {
-                    repr: self.repr.sub(rhs.repr),
+                if cfg!(feature = "certora") {
+                    TemplarNondet::nondet()
+                } else {
+                    Decimal {
+                        repr: self.repr.sub(rhs.repr),
+                    }
                 }
             }
         }
@@ -456,16 +468,20 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn mul(self, rhs: $t) -> Self::Output {
-                #[allow(clippy::cast_possible_truncation)]
-                let mut shr = FRACTIONAL_BITS as u32;
-                let shr_self = self.repr.trailing_zeros().min(shr);
-                let self_repr = self.repr >> shr_self;
-                shr -= shr_self;
-                let shr_rhs = rhs.repr.trailing_zeros().min(shr);
-                let rhs_repr = rhs.repr >> shr_rhs;
-                shr -= shr_rhs;
-                Decimal {
-                    repr: (self_repr * rhs_repr) >> shr,
+                if cfg!(feature = "certora") {
+                    Self::Output::nondet()
+                } else {
+                    #[allow(clippy::cast_possible_truncation)]
+                    let mut shr = FRACTIONAL_BITS as u32;
+                    let shr_self = self.repr.trailing_zeros().min(shr);
+                    let self_repr = self.repr >> shr_self;
+                    shr -= shr_self;
+                    let shr_rhs = rhs.repr.trailing_zeros().min(shr);
+                    let rhs_repr = rhs.repr >> shr_rhs;
+                    shr -= shr_rhs;
+                    Decimal {
+                        repr: (self_repr * rhs_repr) >> shr,
+                    }
                 }
             }
         }
@@ -474,16 +490,20 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn div(self, rhs: $t) -> Self::Output {
-                #[allow(clippy::cast_possible_truncation)]
-                let mut sh = FRACTIONAL_BITS as u32;
-                let sh_self = self.repr.leading_zeros().min(sh);
-                let self_repr = self.repr << sh_self;
-                sh -= sh_self;
-                let sh_rhs = rhs.repr.trailing_zeros().min(sh);
-                let rhs_repr = rhs.repr >> sh_rhs;
-                sh -= sh_rhs;
-                Decimal {
-                    repr: (self_repr / rhs_repr) << sh,
+                if cfg!(feature = "certora") {
+                    TemplarNondet::nondet()
+                } else {
+                    #[allow(clippy::cast_possible_truncation)]
+                    let mut sh = FRACTIONAL_BITS as u32;
+                    let sh_self = self.repr.leading_zeros().min(sh);
+                    let self_repr = self.repr << sh_self;
+                    sh -= sh_self;
+                    let sh_rhs = rhs.repr.trailing_zeros().min(sh);
+                    let rhs_repr = rhs.repr >> sh_rhs;
+                    sh -= sh_rhs;
+                    Decimal {
+                        repr: (self_repr / rhs_repr) << sh,
+                    }
                 }
             }
         }
@@ -537,7 +557,11 @@ macro_rules! impl_int {
         impl From<$t> for Decimal {
             fn from(value: $t) -> Self {
                 Self {
-                    repr: U512::from(value) << FRACTIONAL_BITS,
+                    repr: if cfg!(feature = "certora") {
+                        TemplarNondet::nondet()
+                    } else {
+                        U512::from(value) << FRACTIONAL_BITS
+                    }
                 }
             }
         }
@@ -548,7 +572,12 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn mul(self, rhs: $t) -> Self::Output {
-                Decimal { repr: self.repr * U512::from(rhs) }
+                if cfg!(feature = "certora") {
+                    Self::Output::nondet()
+                } else {
+                    Decimal { repr: self.repr * U512::from(rhs) }
+                }
+
             }
         }
 
@@ -556,7 +585,11 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn mul(self, rhs: $s) -> Self::Output {
-                Decimal { repr: U512::from(self) * rhs.repr }
+                if cfg!(feature = "certora") {
+                    Self::Output::nondet()
+                } else {
+                    Decimal { repr: U512::from(self) * rhs.repr }
+                }
             }
         }
 
@@ -604,7 +637,11 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn sub(self, rhs: $s) -> Self::Output {
-                Decimal::from(self) - rhs
+                if cfg!(feature = "certora") {
+                    Self::Output::nondet()
+                } else {
+                    Decimal::from(self) - rhs
+                }
             }
         }
 

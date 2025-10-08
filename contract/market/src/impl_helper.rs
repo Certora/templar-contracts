@@ -18,7 +18,13 @@ impl Contract {
         self.configuration
             .price_oracle_configuration
             .create_price_pair(&oracle_response)
-            .unwrap_or_else(|e| env::panic_str(&e.to_string()))
+            .unwrap_or_else(|e| {
+                if cfg!(feature = "certora") {
+                    panic!("price_pair") 
+                } else { 
+                    env::panic_str(&e.to_string()) 
+                }
+            })
     }
 
     pub fn execute_supply(&mut self, account_id: AccountId, amount: BorrowAssetAmount) {
@@ -165,6 +171,24 @@ impl Contract {
         amount: BorrowAssetAmount,
         #[callback_unwrap] oracle_response: OracleResponse,
     ) -> Promise {
+        let fees = self.borrow_01_consume_price_internal(account_id.clone(), amount, oracle_response);
+
+        // check state here
+        self.configuration
+            .borrow_asset
+            .transfer(account_id.clone(), amount)
+            .then(
+                self_ext!(Self::GAS_BORROW_02_FINALIZE)
+                    .borrow_02_finalize(account_id, amount, fees),
+            )
+    }
+    
+    pub fn borrow_01_consume_price_internal(
+        &mut self,
+        account_id: AccountId,
+        amount: BorrowAssetAmount,
+        oracle_response: OracleResponse,
+    ) -> BorrowAssetAmount {
         let price_pair = self.price_pair(oracle_response);
 
         // TODO: accumulate_interest() also creates a snapshot; reorder code to not call this twice.
@@ -205,15 +229,8 @@ impl Contract {
 
         drop(borrow_position);
 
-        // check state here
-        self.configuration
-            .borrow_asset
-            .transfer(account_id.clone(), amount)
-            .then(
-                self_ext!(Self::GAS_BORROW_02_FINALIZE)
-                    .borrow_02_finalize(account_id, amount, fees),
-            )
-    }
+        fees
+    } 
 
     pub const GAS_BORROW_02_FINALIZE: Gas = Gas::from_tgas(9);
 

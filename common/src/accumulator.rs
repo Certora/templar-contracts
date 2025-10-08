@@ -2,7 +2,7 @@ use near_sdk::{json_types::U128, near, require};
 
 use crate::{
     asset::{AssetClass, BorrowAsset, FungibleAssetAmount},
-    models::templar_nondet::{declare_nondet, TemplarNondet},
+    models::templar_nondet::TemplarNondet,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

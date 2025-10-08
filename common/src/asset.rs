@@ -9,7 +9,7 @@ use near_sdk::{
     AccountId, Gas, NearToken, Promise,
 };
 
-use crate::{models::templar_nondet::{declare_nondet, nondet_bytes_sz, nondet_choice, TemplarNondet}, number::Decimal};
+use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}, number::Decimal};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]

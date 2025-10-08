@@ -26,9 +26,35 @@ use near_sdk::{
 
 use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
+#[cfg(feature = "certora")]
+#[near(serializers = [borsh, json])]
+#[derive(PartialEq, Eq, Clone)]
+pub struct OracleResponse {
+    pub asset1: PriceIdentifier,
+    pub price1: Option<Price>,
+    pub asset2: PriceIdentifier,
+    pub price2: Option<Price>,
+}
+
+#[cfg(feature = "certora")]
+impl OracleResponse {
+    pub fn get(&self, asset: &PriceIdentifier) -> Option<&Option<Price>> {
+        if *asset == self.asset1 {
+            Some(&self.price1)
+        } else if *asset == self.asset2 {
+            Some(&self.price2)
+        } else {
+            cvlr::cvlr_assert!(false);
+            None
+        }
+    }
+}
+
+#[cfg(not(feature = "certora"))]
 pub type OracleResponse = HashMap<PriceIdentifier, Option<Price>>;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(not(feature = "certora"), derive(PartialEq))]
 #[near(serializers = [borsh, json])]
 pub struct PriceIdentifier(
     #[serde(
@@ -37,6 +63,22 @@ pub struct PriceIdentifier(
     )]
     pub [u8; 32],
 );
+
+#[cfg(feature = "certora")]
+impl PartialEq for PriceIdentifier {
+    #[inline(never)]
+    fn eq(&self, other: &Self) -> bool {
+        unsafe {
+            let x: [u64; 4] = std::mem::transmute(self.0);
+            let y: [u64; 4] = std::mem::transmute(other.0);
+            x[0] == y[0] &&
+            x[1] == y[1] &&
+            x[2] == y[2] &&
+            x[3] == y[3]
+        }
+    }
+}
+
 
 declare_nondet!(
     PriceIdentifier, arr => PriceIdentifier(arr)

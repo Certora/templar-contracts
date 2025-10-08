@@ -1,16 +1,14 @@
 use std::collections::HashMap;
 
-use cvlr::cvlr_assume;
 use near_sdk::{
     env, near, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount, FungibleAsset, FungibleAssetAmount},
+    asset::{BorrowAssetAmount, CollateralAssetAmount, FungibleAssetAmount},
     asset_op,
     borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
     chunked_append_only_list::ChunkedAppendOnlyList,
-    event::MarketEvent,
     market::{MarketConfiguration, WithdrawalResolution},
     models::{
         self,
@@ -122,6 +120,11 @@ impl Market {
         self_
     }
 
+    #[cfg(feature = "certora")]
+    pub fn focus_borrow_positions(&mut self, a: AccountId) {
+        self.borrow_positions.focus(a)
+    }
+
     pub fn total_incoming(&self) -> BorrowAssetAmount {
         self.borrow_asset_deposited_incoming.values().fold(
             BorrowAssetAmount::zero(),
@@ -148,19 +151,23 @@ impl Market {
 
         // If still in current time chunk, just update the current snapshot.
         if self.current_snapshot.time_chunk == time_chunk {
-            self.current_snapshot.update_active(
-                self.borrow_asset_deposited_active,
-                self.borrow_asset_borrowed,
-                self.collateral_asset_deposited,
-                &self.configuration.borrow_interest_rate_strategy,
-            );
-            self.current_snapshot.add_yield(yield_distribution);
-            self.current_snapshot.set_borrow_asset_deposited_incoming(
-                *self
-                    .borrow_asset_deposited_incoming
-                    .get(&self.finalized_snapshots.len())
-                    .unwrap_or(&0.into()),
-            );
+            if cfg!(feature = "certora") {
+                self.current_snapshot = Snapshot::nondet();
+            } else {
+                self.current_snapshot.update_active(
+                    self.borrow_asset_deposited_active,
+                    self.borrow_asset_borrowed,
+                    self.collateral_asset_deposited,
+                    &self.configuration.borrow_interest_rate_strategy,
+                );
+                self.current_snapshot.add_yield(yield_distribution);
+                self.current_snapshot.set_borrow_asset_deposited_incoming(
+                    *self
+                        .borrow_asset_deposited_incoming
+                        .get(&self.finalized_snapshots.len())
+                        .unwrap_or(&0.into()),
+                );
+            }
         } else {
             // Otherwise, finalize the current snapshot and create a new one.
             let deposited_incoming = self
@@ -168,22 +175,27 @@ impl Market {
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
             asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
-            let mut snapshot = Snapshot::new(time_chunk);
-            snapshot.set_yield_distribution(yield_distribution);
-            snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
-            snapshot.update_active(
-                self.borrow_asset_deposited_active,
-                self.borrow_asset_borrowed,
-                self.collateral_asset_deposited,
-                &self.configuration.borrow_interest_rate_strategy,
-            );
+            let mut snapshot = if cfg!(feature = "certora") {
+                 Snapshot::nondet()
+            } else {
+                let mut snapshot = Snapshot::new(time_chunk);
+                snapshot.set_yield_distribution(yield_distribution);
+                snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
+                snapshot.update_active(
+                    self.borrow_asset_deposited_active,
+                    self.borrow_asset_borrowed,
+                    self.collateral_asset_deposited,
+                    &self.configuration.borrow_interest_rate_strategy,
+                );
+                snapshot
+            };
             std::mem::swap(&mut snapshot, &mut self.current_snapshot);
 
-            // #[cfg(not(feature = "certora"))]
-            // MarketEvent::SnapshotFinalized {
-            //     index: self.finalized_snapshots.len(),
-            //     snapshot: snapshot.clone(),
-            // }.emit();
+            #[cfg(not(feature = "certora"))]
+            MarketEvent::SnapshotFinalized {
+                index: self.finalized_snapshots.len(),
+                snapshot: snapshot.clone(),
+            }.emit();
 
             self.finalized_snapshots.push(snapshot);
         }
@@ -192,20 +204,24 @@ impl Market {
     }
 
     pub fn get_borrow_asset_available_to_borrow(&self) -> BorrowAssetAmount {
-        #[allow(
-            clippy::unwrap_used,
-            reason = "Factor is guaranteed to be <=1, so value must still fit in u128"
-        )]
-        let must_retain = ((1u32 - self.configuration.borrow_asset_maximum_usage_ratio)
-            * Decimal::from(self.borrow_asset_deposited_active))
-        .to_u128_ceil()
-        .unwrap();
+        if cfg!(feature = "certora") {
+            TemplarNondet::nondet()
+        } else {
+            #[allow(
+                clippy::unwrap_used,
+                reason = "Factor is guaranteed to be <=1, so value must still fit in u128"
+            )]
+            let must_retain = ((1u32 - self.configuration.borrow_asset_maximum_usage_ratio)
+                * Decimal::from(self.borrow_asset_deposited_active))
+            .to_u128_ceil()
+            .unwrap();
 
-        u128::from(self.borrow_asset_deposited_active)
-            .saturating_sub(u128::from(self.borrow_asset_borrowed))
-            .saturating_sub(u128::from(self.borrow_asset_in_flight))
-            .saturating_sub(must_retain)
-            .into()
+            u128::from(self.borrow_asset_deposited_active)
+                .saturating_sub(u128::from(self.borrow_asset_borrowed))
+                .saturating_sub(u128::from(self.borrow_asset_in_flight))
+                .saturating_sub(must_retain)
+                .into()
+        }
     }
 
     pub fn iter_supply_positions(&self) -> impl Iterator<Item = (AccountId, SupplyPosition)> + '_ {
@@ -329,10 +345,11 @@ impl Market {
             return;
         }
 
-        // MarketEvent::GlobalYieldDistributed {
-        //     borrow_asset_amount: amount,
-        // }
-        // .emit();
+        #[cfg(not(feature = "certora"))]
+        MarketEvent::GlobalYieldDistributed {
+            borrow_asset_amount: amount,
+        }
+        .emit();
 
         // First, static yield.
 
@@ -343,16 +360,18 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            // let share = amount
-            //     .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())
-            //     // Safety:
-            //     // Guaranteed share_weight <= total_weight
-            //     // Guaranteed sum(share_weights) == total_weight
-            //     // Guaranteed sum(floor(total_amount * share_weight / total_weight) for each share_weight in share_weights) <= total_amount
-            //     // Therefore this should never panic.
-            //     .unwrap();
-
-            let share = FungibleAssetAmount::nondet();
+            let share = if cfg!(feature = "certora") {
+                FungibleAssetAmount::nondet()
+            } else {
+                amount
+                .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())
+                // Safety:
+                // Guaranteed share_weight <= total_weight
+                // Guaranteed sum(share_weights) == total_weight
+                // Guaranteed sum(floor(total_amount * share_weight / total_weight) for each share_weight in share_weights) <= total_amount
+                // Therefore this should never panic.
+                .unwrap()
+            };
 
             let mut yield_record = self.static_yield.get(account_id).unwrap_or_default();
             // Assuming borrow_asset is implemented correctly:

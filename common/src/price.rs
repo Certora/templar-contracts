@@ -9,12 +9,25 @@ use crate::{
     oracle::pyth,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Eq, Clone, Debug)]
+#[cfg_attr(not(feature = "certora"), derive(PartialEq))]
+#[near_sdk::near(serializers = [borsh, json])]
 pub struct Price<T: AssetClass> {
     _asset: PhantomData<T>,
     price: u128,
     confidence: u128,
     exponent: i32,
+}
+
+#[cfg(feature = "certora")]
+impl <T: AssetClass> PartialEq for Price<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // No short-circuiting
+        (self._asset == other._asset) & 
+        (self.price == other.price) & 
+        (self.confidence == other.confidence) & 
+        (self.exponent == other.exponent)
+    }
 }
 
 impl<T: AssetClass> TemplarNondet for crate::price::Price<T> {
@@ -68,10 +81,20 @@ fn from_pyth_price<T: AssetClass>(
     })
 }
 
-#[derive(Clone, Debug)]
+#[derive(Eq, Clone, Debug)]
+#[cfg_attr(not(feature = "certora"), derive(PartialEq))]
+#[near_sdk::near(serializers = [borsh, json])]
 pub struct PricePair {
     pub collateral: Price<CollateralAsset>,
     pub borrow: Price<BorrowAsset>,
+}
+
+#[cfg(feature = "certora")]
+impl PartialEq for PricePair {
+    fn eq(&self, other: &Self) -> bool {
+        // No short-circuiting
+        (self.collateral == other.collateral) & (self.borrow == other.borrow)
+    }
 }
 
 impl TemplarNondet for PricePair {

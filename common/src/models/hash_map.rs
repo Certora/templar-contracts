@@ -65,8 +65,6 @@ where
             if let Some(p) = self.0.0.the_v.as_mut() {
                 f(p);
             }
-        } else {
-            self.0.0.nondet_v();
         }
         self
     }
@@ -149,7 +147,7 @@ where
             self.0.the_v = None;
             r
         } else {
-            self.0.nondet_v().cloned()
+            TemplarNondet::nondet()
         }
     }
 
