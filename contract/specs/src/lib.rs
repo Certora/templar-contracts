@@ -10,7 +10,7 @@ use templar_common::market::{Market, WithdrawalResolution};
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_common::{asset_op, models};
+use templar_common::{models};
 use templar_market_contract::Contract;
 
 
