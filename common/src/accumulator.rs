@@ -9,7 +9,7 @@ use crate::{
 #[near(serializers = [borsh, json])]
 pub struct Accumulator<T: AssetClass> {
     pub total: FungibleAssetAmount<T>,
-    fraction_as_u128_dividend: U128,
+    pub fraction_as_u128_dividend: U128,
     pub next_snapshot_index: u32,
     #[borsh(skip)]
     #[serde(default, skip_serializing_if = "FungibleAssetAmount::is_zero")]

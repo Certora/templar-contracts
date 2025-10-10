@@ -20,7 +20,7 @@ impl Contract {
 
         require!(!amount.is_zero(), "Borrow amount must be greater than zero");
 
-        let account_id = AccountId::nondet(); // does this have to be env::predecessor_account_id()
+        let account_id = AccountId::nondet();
 
         let proposed_amount =
             if let Some(borrow_position) = self.borrow_position_ref(account_id.clone()) {

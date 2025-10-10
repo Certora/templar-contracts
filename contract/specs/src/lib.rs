@@ -1,18 +1,17 @@
-use cvlr::{clog, cvlr_assert, cvlr_satisfy, nondet, rule};
+use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, nondet, rule};
 
-use near_sdk::{ AccountId};
+use near_sdk::AccountId;
 
 use models::templar_nondet::*;
 
-use templar_common::asset::BorrowAssetAmount;
+use templar_common::asset::{BorrowAssetAmount};
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
 use templar_common::market::{Market, WithdrawalResolution};
+use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_common::{models};
 use templar_market_contract::Contract;
-
 
 // #[rule]
 pub fn split_ok_1() {
@@ -188,28 +187,48 @@ pub fn snapshot_with_yield_distribution_integrity() {
 pub fn withdraws_decrease_available_correctly() {
     let market = Market::nondet();
     let mut c = Contract::nondet();
-	let available_pre = market.get_borrow_asset_available_to_borrow().amount.0;
-	
+    let available_pre = market.get_borrow_asset_available_to_borrow().amount.0;
+
     let withdrawal_resolution = WithdrawalResolution::nondet();
     let expected_success: bool = nondet();
-	let withdrawl_request = c.withdrawal_queue.try_pop().unwrap();
-	let amount_withdrawn = withdrawl_request.1.amount.0;
-	
-	c.execute_next_supply_withdrawal_request_01_finalize(withdrawal_resolution, expected_success);
-	
-	let available_post = market.get_borrow_asset_available_to_borrow().amount.0;
-	cvlr_assert!(available_pre == available_post - amount_withdrawn);
+    let withdrawl_request = c.withdrawal_queue.try_pop().unwrap();
+    let amount_withdrawn = withdrawl_request.1.amount.0;
+
+    c.execute_next_supply_withdrawal_request_01_finalize(withdrawal_resolution, expected_success);
+
+    let available_post = market.get_borrow_asset_available_to_borrow().amount.0;
+    cvlr_assert!(available_pre == available_post - amount_withdrawn);
 }
 
-// timing out, needs investigation
 #[rule]
 pub fn double_borrow_fails() {
     let market = Market::nondet();
-    let c = Contract::nondet();
-    let max_amount = market.configuration.borrow_range.maximum.unwrap();
-    c.compute_amount(max_amount);
-    c.compute_amount(max_amount);
-    cvlr_assert!(false);
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let amount1 = BorrowAssetAmount::nondet();
+    let amount2 = BorrowAssetAmount::nondet();
+    let max_amount = market.configuration.borrow_range.maximum.unwrap().amount.0;
+    cvlr_assume!(max_amount > 0);
+    clog!(amount1.amount.0);
+    clog!(amount2.amount.0);
+    clog!(max_amount);
+    c.compute_amount(amount1);
+    c.borrow_01_consume_price_internal(account_id, amount1, oracle);
+    c.compute_amount(amount2);
+    cvlr_assert!(amount1.amount.0 + amount2.amount.0 <= max_amount);
 }
 
 #[rule]
@@ -220,6 +239,20 @@ pub fn snapshot_with_yield_and_supplier_position() {
     let account = AccountId::nondet();
     let yield_pre;
     let mut position = SupplyPosition::nondet();
+    let borrow_asset_deposit_active = position.get_deposit().active.amount.0;
+    let borrow_asset_deposit_outgoing = position.get_deposit().outgoing.amount.0;
+    let borrow_asset_yield_total = position.borrow_asset_yield.total.amount.0;
+    let borrow_asset_yield_next = position.borrow_asset_yield.next_snapshot_index;
+    let borrow_asset_yield_fraction = position.borrow_asset_yield.fraction_as_u128_dividend.0;
+    
+    clog!(borrow_amount.amount.0);
+    clog!(amount.0);
+    clog!(borrow_asset_deposit_active);
+    clog!(borrow_asset_deposit_outgoing);
+    clog!(borrow_asset_yield_total);
+    clog!(borrow_asset_yield_next);
+    clog!(borrow_asset_yield_fraction);
+
     {
         let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position);
 
@@ -227,6 +260,18 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
         position = sp_guard.inner().clone();
         yield_pre = position.borrow_asset_yield.total;
+
+        let borrow_asset_deposit_active_after_first = position.get_deposit().active.amount.0;
+        let borrow_asset_deposit_outgoing_after_first = position.get_deposit().outgoing.amount.0;
+        let borrow_asset_yield_total_after_first = position.borrow_asset_yield.total.amount.0;
+        let borrow_asset_yield_next_after_first = position.borrow_asset_yield.next_snapshot_index;
+        let borrow_asset_yield_fraction_after_first = position.borrow_asset_yield.fraction_as_u128_dividend.0;
+
+        clog!(borrow_asset_deposit_active_after_first);
+        clog!(borrow_asset_deposit_outgoing_after_first);
+        clog!(borrow_asset_yield_total_after_first);
+        clog!(borrow_asset_yield_next_after_first);
+        clog!(borrow_asset_yield_fraction_after_first);
     }
 
     market.snapshot_with_yield_distribution(borrow_amount);
@@ -236,10 +281,24 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
     {
         let position = sp_guard.inner();
+
+        let borrow_asset_deposit_active_after_second = position.get_deposit().active.amount.0;
+        let borrow_asset_deposit_outgoing_after_second = position.get_deposit().outgoing.amount.0;
+        let borrow_asset_yield_total_after_second = position.borrow_asset_yield.total.amount.0;
+        let borrow_asset_yield_next_after_second = position.borrow_asset_yield.next_snapshot_index;
+        let borrow_asset_yield_fraction_after_second = position.borrow_asset_yield.fraction_as_u128_dividend.0;
+
+        clog!(borrow_asset_deposit_active_after_second);
+        clog!(borrow_asset_deposit_outgoing_after_second);
+        clog!(borrow_asset_yield_total_after_second);
+        clog!(borrow_asset_yield_next_after_second);
+        clog!(borrow_asset_yield_fraction_after_second);
+
         let yield_post = position.borrow_asset_yield.total;
+
         clog!(yield_post.amount.0);
         clog!(yield_pre.amount.0);
-        clog!(amount.0);
+        
         cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
     }
 }
