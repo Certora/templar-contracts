@@ -25,3 +25,4 @@ workspace = true
 
 [features]
 certora = []
+certora_nonhealth = []

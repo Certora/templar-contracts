@@ -6,7 +6,7 @@ use models::templar_nondet::*;
 
 use templar_common::asset::{BorrowAssetAmount};
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
-use templar_common::market::{Market, WithdrawalResolution};
+use templar_common::market::{Market};
 use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
@@ -67,7 +67,7 @@ pub fn accumulate_interest_sanity() {
 }
 
 #[rule]
-pub fn record_borrow_asset_protocol_yield_intergity() {
+pub fn record_borrow_asset_protocol_yield_integrity() {
     let amount = TemplarNondet::nondet(); //wrap to type BorrowAssetAmount
     let mut market = Market::nondet(); //nondet Market, mutable
     let protocol_id = market.configuration.protocol_account_id.clone();
@@ -125,17 +125,25 @@ pub fn record_borrow_asset_yield_distribution_integrity_2() {
         .yield_weights
         .r#static
         .get(&account_id)
-        .copied();
+        .copied()
+        .unwrap();
 
     let static_yield_account_before = market.static_yield.get(&account_id);
 
     market.record_borrow_asset_yield_distribution(amount);
 
-    let static_yield_acount_after = market.static_yield.get(&account_id);
+    let static_yield_account_after = market.static_yield.get(&account_id);
+
+    clog!(static_yield_account_before.as_ref().unwrap().collateral_asset.amount.0);
+    clog!(static_yield_account_before.as_ref().unwrap().borrow_asset.amount.0);
+    
+    clog!(static_yield_account_after.as_ref().unwrap().collateral_asset.amount.0);
+    clog!(static_yield_account_after.as_ref().unwrap().borrow_asset.amount.0);
+    clog!(yield_weight_account);
 
     cvlr_assert!(
-        !(static_yield_acount_after > static_yield_account_before)
-            || yield_weight_account > Some(0)
+        !(static_yield_account_after > static_yield_account_before)
+            || yield_weight_account > 0
     );
 }
 
@@ -189,12 +197,10 @@ pub fn withdraws_decrease_available_correctly() {
     let mut c = Contract::nondet();
     let available_pre = market.get_borrow_asset_available_to_borrow().amount.0;
 
-    let withdrawal_resolution = WithdrawalResolution::nondet();
-    let expected_success: bool = nondet();
-    let withdrawl_request = c.withdrawal_queue.try_pop().unwrap();
+    let withdrawl_request = c.withdrawal_queue.peek().unwrap();
     let amount_withdrawn = withdrawl_request.1.amount.0;
 
-    c.execute_next_supply_withdrawal_request_01_finalize(withdrawal_resolution, expected_success);
+    c.execute_next_supply_withdrawal_request_helper();
 
     let available_post = market.get_borrow_asset_available_to_borrow().amount.0;
     cvlr_assert!(available_pre == available_post - amount_withdrawn);
