@@ -1,4 +1,4 @@
-use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, nondet, rule};
+use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, rule};
 
 use near_sdk::AccountId;
 

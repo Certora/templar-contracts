@@ -4,7 +4,7 @@ use near_sdk::{env, json_types::U64, near, require, AccountId};
 use crate::models;
 
 use crate::{
-    accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, FungibleAssetAmount}, asset_op, event::MarketEvent, market::{Market, WithdrawalResolution}, number::Decimal
+    accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, FungibleAssetAmount}, asset_op, market::{Market, WithdrawalResolution}, number::Decimal
 };
 
 /// This struct can only be constructed after accumulating yield on a
@@ -387,6 +387,7 @@ impl<'a> SupplyPositionGuard<'a> {
         };
 
         if success {
+            #[cfg(not(feature = "certora"))]
             MarketEvent::SupplyWithdrawn {
                 account_id: self.account_id.clone(),
                 borrow_asset_amount_to_account: withdrawal_resolution.amount_to_account,

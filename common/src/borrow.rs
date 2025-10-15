@@ -586,7 +586,7 @@ impl<'a> BorrowPositionGuard<'a> {
          };
 
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::InterestAccumulated {
                 account_id: self.account_id.clone(),

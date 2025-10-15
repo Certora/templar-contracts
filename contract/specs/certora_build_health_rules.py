@@ -15,7 +15,7 @@ COMMAND = "cargo build --release --target=wasm32-unknown-unknown --features cert
 PROJECT_DIR = (SCRIPT_DIR / "../").resolve()
 SOURCES = ["src/lib.rs"]
 EXECUTABLES = "../target/wasm32-unknown-unknown/release/templar_market_specs.wasm"
-
+print(PROJECT_DIR)
 VERBOSE = False
 
 def log(msg):

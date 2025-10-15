@@ -151,7 +151,7 @@ impl Market {
 
         // If still in current time chunk, just update the current snapshot.
         if self.current_snapshot.time_chunk == time_chunk {
-            if cfg!(feature = "certora") {
+            if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                 self.current_snapshot = Snapshot::nondet();
             } else {
                 self.current_snapshot.update_active(
@@ -175,7 +175,7 @@ impl Market {
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
             asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
-            let mut snapshot = if cfg!(feature = "certora") {
+            let mut snapshot = if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                  Snapshot::nondet()
             } else {
                 let mut snapshot = Snapshot::new(time_chunk);
@@ -191,7 +191,7 @@ impl Market {
             };
             std::mem::swap(&mut snapshot, &mut self.current_snapshot);
 
-            #[cfg(not(feature = "certora"))]
+            #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
             MarketEvent::SnapshotFinalized {
                 index: self.finalized_snapshots.len(),
                 snapshot: snapshot.clone(),
@@ -344,7 +344,7 @@ impl Market {
             return;
         }
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         MarketEvent::GlobalYieldDistributed {
             borrow_asset_amount: amount,
         }
@@ -359,7 +359,7 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            let share = if cfg!(feature = "certora") {
+            let share = if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                 FungibleAssetAmount::nondet()
             } else {
                 amount

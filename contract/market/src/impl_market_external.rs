@@ -214,6 +214,29 @@ impl MarketExternalInterface for Contract {
         self.withdrawal_queue.remove(&env::predecessor_account_id());
     }
 
+    #[cfg(feature = "certora")]
+    fn execute_next_supply_withdrawal_request(&mut self) -> PromiseOrValue<()> {
+
+        let (withdrawal_resolution, expect_success) =  self.execute_next_supply_withdrawal_request_helper();
+
+        PromiseOrValue::Promise(
+            self.configuration
+                .borrow_asset
+                .transfer(
+                    withdrawal_resolution.account_id.clone(),
+                    withdrawal_resolution.amount_to_account,
+                )
+                .then(
+                    self_ext!(Self::GAS_AFTER_EXECUTE_NEXT_WITHDRAWAL)
+                        .execute_next_supply_withdrawal_request_01_finalize(
+                            withdrawal_resolution,
+                            expect_success,
+                        ),
+                ),
+        )
+    }
+
+    #[cfg(not(feature = "certora"))]
     fn execute_next_supply_withdrawal_request(&mut self) -> PromiseOrValue<()> {
         let Some(withdrawal_resolution) = self
             .try_lock_next_withdrawal_request()
