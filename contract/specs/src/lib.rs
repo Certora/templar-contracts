@@ -125,26 +125,19 @@ pub fn record_borrow_asset_yield_distribution_integrity_2() {
         .yield_weights
         .r#static
         .get(&account_id)
-        .copied()
-        .unwrap();
+        .copied();
 
     let static_yield_account_before = market.static_yield.get(&account_id);
 
     market.record_borrow_asset_yield_distribution(amount);
 
-    let static_yield_account_after = market.static_yield.get(&account_id);
-
-    clog!(static_yield_account_before.as_ref().unwrap().collateral_asset.amount.0);
-    clog!(static_yield_account_before.as_ref().unwrap().borrow_asset.amount.0);
-    
-    clog!(static_yield_account_after.as_ref().unwrap().collateral_asset.amount.0);
-    clog!(static_yield_account_after.as_ref().unwrap().borrow_asset.amount.0);
-    clog!(yield_weight_account);
+    let static_yield_acount_after = market.static_yield.get(&account_id);
 
     cvlr_assert!(
-        !(static_yield_account_after > static_yield_account_before)
-            || yield_weight_account > 0
+        !(static_yield_acount_after > static_yield_account_before)
+            || yield_weight_account > Some(0)
     );
+
 }
 
 #[rule]
