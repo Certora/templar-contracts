@@ -13,7 +13,7 @@ COMMAND = "cargo build --release --target=wasm32-unknown-unknown --no-default-fe
 
 # JSON FIELDS
 PROJECT_DIR = (SCRIPT_DIR / "../").resolve()
-SOURCES = ["specs/src/lib.rs"]
+SOURCES = ["specs/src/lib.rs", "market/**/*.rs", "../common/src/**/*.rs"]
 EXECUTABLES = "../target/wasm32-unknown-unknown/release/templar_market_specs.wasm"
 
 VERBOSE = False
