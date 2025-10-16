@@ -481,7 +481,7 @@ impl<'a> BorrowPositionGuard<'a> {
 
         asset_op!(self.market.collateral_asset_deposited -= amount);
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
         MarketEvent::CollateralWithdrawn {
             account_id: self.account_id.clone(),
             collateral_asset_amount: amount,
@@ -535,7 +535,7 @@ impl<'a> BorrowPositionGuard<'a> {
         asset_op!(self.market.borrow_asset_borrowed += amount);
         self.market.snapshot();
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
         MarketEvent::BorrowWithdrawn {
             account_id: self.account_id.clone(),
             borrow_asset_amount: amount,
@@ -587,7 +587,7 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        let accumulation_record = if cfg!(all(feature = "certora", feature = "certora_nonhealth")) {
+        let accumulation_record = if cfg!(any(feature = "certora", feature = "certora_nonhealth")) {
             AccumulationRecord::nondet()
          } else { 
             self.calculate_interest(snapshot_limit)

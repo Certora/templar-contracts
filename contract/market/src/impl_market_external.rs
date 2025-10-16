@@ -87,9 +87,9 @@ impl MarketExternalInterface for Contract {
         ))
     }
 
-    #[cfg(feature = "certora")]
+    #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
     fn borrow(&mut self, amount: BorrowAssetAmount) -> Promise {
-        #[cfg(feature = "certora")]
+        #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
         let account_id = self.compute_amount(amount);
         self.configuration
             .price_oracle_configuration
@@ -100,7 +100,7 @@ impl MarketExternalInterface for Contract {
             )
     }
 
-    #[cfg(not(feature = "certora"))]
+    #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
     fn borrow(&mut self, amount: BorrowAssetAmount) -> Promise {
         require!(!amount.is_zero(), "Borrow amount must be greater than zero");
 
@@ -214,7 +214,7 @@ impl MarketExternalInterface for Contract {
         self.withdrawal_queue.remove(&env::predecessor_account_id());
     }
 
-    #[cfg(feature = "certora")]
+    #[cfg(feature = "certora_nonhealth")]
     fn execute_next_supply_withdrawal_request(&mut self) -> PromiseOrValue<()> {
 
         let (withdrawal_resolution, expect_success) =  self.execute_next_supply_withdrawal_request_helper();
@@ -236,7 +236,7 @@ impl MarketExternalInterface for Contract {
         )
     }
 
-    #[cfg(not(feature = "certora"))]
+    #[cfg(not(feature = "certora_nonhealth"))]
     fn execute_next_supply_withdrawal_request(&mut self) -> PromiseOrValue<()> {
         let Some(withdrawal_resolution) = self
             .try_lock_next_withdrawal_request()

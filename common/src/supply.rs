@@ -311,7 +311,7 @@ impl<'a> SupplyPositionGuard<'a> {
         let accumulation_record = self.calculate_yield(snapshot_limit);
         self.activate_incoming(accumulation_record.next_snapshot_index);
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::YieldAccumulated {
                 account_id: self.account_id.clone(),
@@ -389,7 +389,7 @@ impl<'a> SupplyPositionGuard<'a> {
         };
 
         if success {
-            #[cfg(not(feature = "certora"))]
+            #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
             MarketEvent::SupplyWithdrawn {
                 account_id: self.account_id.clone(),
                 borrow_asset_amount_to_account: withdrawal_resolution.amount_to_account,
@@ -417,7 +417,7 @@ impl<'a> SupplyPositionGuard<'a> {
 
         self.market.snapshot();
 
-        #[cfg(not(feature = "certora"))]
+        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
         if !amount.is_zero() {
             MarketEvent::SupplyDeposited {
                 account_id: self.account_id.clone(),

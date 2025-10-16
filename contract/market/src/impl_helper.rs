@@ -14,7 +14,7 @@ use crate::{Contract, ContractExt, ReturnStyle};
 
 /// Internal helpers.
 impl Contract {
-    #[cfg(feature = "certora")]
+    #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
     pub fn execute_next_supply_withdrawal_request_helper(&mut self) -> (WithdrawalResolution, bool) {
         let withdrawal_resolution = self
             .try_lock_next_withdrawal_request()
@@ -34,7 +34,7 @@ impl Contract {
         return (withdrawal_resolution, expect_success)
     }
 
-    #[cfg(feature = "certora")]
+    #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
     pub fn compute_amount(&self, amount: BorrowAssetAmount) -> AccountId {
         use templar_common::models::templar_nondet::TemplarNondet;
 
@@ -388,7 +388,7 @@ impl Contract {
             //   NEP-141 tokens, this usually means that the user opted out of
             //   storage management on that contract and deleted their record.
 
-            #[cfg(not(feature = "certora"))]
+            #[cfg(not(feature = "certora_nonhealth"))]
             env::log_str("The withdrawal request cannot be fulfilled at this time.");
             self.withdrawal_queue.unlock();
         }
