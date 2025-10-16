@@ -201,7 +201,6 @@ pub fn withdraws_decrease_available_correctly() {
 
 #[rule]
 pub fn double_borrow_fails() {
-    let market = Market::nondet();
     let mut c = Contract::nondet();
     let account_id = AccountId::nondet();
     let oracle = OracleResponse {
@@ -219,8 +218,7 @@ pub fn double_borrow_fails() {
     };
     let amount1 = BorrowAssetAmount::nondet();
     let amount2 = BorrowAssetAmount::nondet();
-    let max_amount = market.configuration.borrow_range.maximum.unwrap().amount.0;
-    cvlr_assume!(max_amount > 0);
+    let max_amount = c.market.configuration.borrow_range.maximum.unwrap().amount.0;
     clog!(amount1.amount.0);
     clog!(amount2.amount.0);
     clog!(max_amount);

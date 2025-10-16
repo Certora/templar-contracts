@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use cvlr::clog;
 use near_sdk::{env, json_types::U64, near, require, AccountId};
 use crate::models;
 
@@ -177,6 +178,7 @@ impl<M: Deref<Target = Market>> SupplyPositionRef<M> {
             }
 
             next_snapshot_index = i as u32 + 1;
+            clog!(next_snapshot_index);
         }
 
         AccumulationRecord {

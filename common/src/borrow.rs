@@ -392,7 +392,7 @@ pub(crate) fn calculate_interest(
         result
     }
 
-    #[cfg(not(feature = "certora"))]
+    #[cfg(feature = "certora_nonhealth")]
     pub fn satisfies_mcr_maintenance(
         &self, 
         price_pair: &PricePair
@@ -587,7 +587,7 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        let accumulation_record = if cfg!(feature = "certora") {
+        let accumulation_record = if cfg!(all(feature = "certora", feature = "certora_nonhealth")) {
             AccumulationRecord::nondet()
          } else { 
             self.calculate_interest(snapshot_limit)
@@ -603,7 +603,7 @@ impl<'a> BorrowPositionGuard<'a> {
             .emit();
         }
 
-        #[cfg(feature = "certora")]
+        #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))]
         { 
           self.position.price_pair_ok = None; 
         }

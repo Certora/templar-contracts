@@ -201,7 +201,7 @@ impl Market {
     }
 
     pub fn get_borrow_asset_available_to_borrow(&self) -> BorrowAssetAmount {
-        if cfg!(feature = "certora") {
+        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             TemplarNondet::nondet()
         } else {
             #[allow(
