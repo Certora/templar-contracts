@@ -85,7 +85,7 @@ impl BorrowPosition {
             temporary_lock: 0.into(),
             is_liquidation_locked: false,
             #[cfg(feature = "certora")]
-            price_pair_ok: TemplarNondet::nondet()
+            price_pair_ok: None
         }
     }
 
@@ -105,7 +105,7 @@ impl BorrowPosition {
             temporary_lock,
             is_liquidation_locked,
             #[cfg(feature = "certora")]
-            price_pair_ok: TemplarNondet::nondet()
+            price_pair_ok: None
         }
     }
 
@@ -373,19 +373,23 @@ pub(crate) fn calculate_interest(
         &mut self, 
         price_pair: &PricePair
     ) -> bool {
-        #[cfg(feature = "certora")]
-        {
-            if let Some(ref pair) = self.position.price_pair_ok {
-                if pair == price_pair {
-                    return true
-                }
+        // Simulate checking and remembering the value of the real implementation:
+        // First, check and see if we already did the check and got `true` 
+        // for the input price pair.
+        // Since the implementation is deterministic, we can return `true` again.
+        if let Some(ref pair) = self.position.price_pair_ok {
+            if pair == price_pair {
+                return true
             }
-            let result = bool::nondet();
-            if result {
-                self.position.price_pair_ok = Some(price_pair.clone())
-            }
-            result
         }
+        // Otherwise, choose a result nondeterministically - in the case
+        // that the check is successful, remember the input price pair
+        // (thus forgetting the previous value)
+        let result = TemplarNondet::nondet();
+        if result {
+            self.position.price_pair_ok = Some(price_pair.clone())
+        }
+        result
     }
 
     #[cfg(not(feature = "certora"))]
@@ -491,6 +495,10 @@ impl<'a> BorrowPositionGuard<'a> {
         amount: BorrowAssetAmount,
         fees: BorrowAssetAmount,
     ) {
+        #[cfg(feature = "certora")] 
+        {
+            self.position.price_pair_ok = None;
+        }
         asset_op! {
             self.market.borrow_asset_in_flight += amount;
             self.position.temporary_lock += amount;

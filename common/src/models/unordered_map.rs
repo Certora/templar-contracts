@@ -56,10 +56,12 @@ where
 
     #[inline(never)]
     pub fn get(&self, k: &K) -> Option<V> {
-        if self.0.the_x == *k { 
-            self.0.the_v.clone()
+        let have = self.0.the_v.clone();
+        let have_not = TemplarNondet::nondet();
+        if self.0.the_x.eq(k) { 
+            have
         } else { 
-            TemplarNondet::nondet()
+            have_not
         }
     }
 

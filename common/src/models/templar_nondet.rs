@@ -210,7 +210,13 @@ impl TemplarNondet for AccountId {
     #[inline(never)]
     fn nondet() -> Self {
         unsafe {
-            std::mem::transmute(u64::nondet())
+            let boxed = Box::from_raw(
+                std::ptr::slice_from_raw_parts_mut(
+                 CERTORA_nondet_bytes(8),
+                 8 
+                )
+            );
+            std::mem::transmute(boxed)
         }
     }
 }

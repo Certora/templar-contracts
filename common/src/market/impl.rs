@@ -175,8 +175,8 @@ impl Market {
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
             asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
-            let mut snapshot = if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
-                 Snapshot::nondet()
+            if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
+                self.finalized_snapshots = TemplarNondet::nondet();
             } else {
                 let mut snapshot = Snapshot::new(time_chunk);
                 snapshot.set_yield_distribution(yield_distribution);
@@ -187,17 +187,15 @@ impl Market {
                     self.collateral_asset_deposited,
                     &self.configuration.borrow_interest_rate_strategy,
                 );
-                snapshot
-            };
             std::mem::swap(&mut snapshot, &mut self.current_snapshot);
-
             #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
             MarketEvent::SnapshotFinalized {
                 index: self.finalized_snapshots.len(),
                 snapshot: snapshot.clone(),
             }.emit();
-
             self.finalized_snapshots.push(snapshot);
+            };
+
         }
         self.finalized_snapshots.len()
     }
