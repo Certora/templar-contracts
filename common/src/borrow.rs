@@ -392,7 +392,7 @@ pub(crate) fn calculate_interest(
         result
     }
 
-    #[cfg(feature = "certora_nonhealth")]
+    #[cfg(all(not(feature = "certora"), feature = "certora_nonhealth"))]
     pub fn satisfies_mcr_maintenance(
         &self, 
         price_pair: &PricePair

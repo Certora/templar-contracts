@@ -9,7 +9,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Command to run for compiling the rust project.
-COMMAND = "cargo build --release --target=wasm32-unknown-unknown --no-default-features --features certora_nonhealth"
+COMMAND = "just integrity"
 
 # JSON FIELDS
 PROJECT_DIR = (SCRIPT_DIR / "../").resolve()
