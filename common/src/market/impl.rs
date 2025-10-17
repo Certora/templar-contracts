@@ -371,9 +371,9 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            #[cfg(all(feature = "certora", feature = "certora_nonhealth"))]
+            #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
             let share = FungibleAssetAmount::nondet();
-            #[cfg(not(all(feature = "certora", feature = "certora_nonhealth")))]
+            #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
             let share =
                 amount
                 .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())

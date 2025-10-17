@@ -589,9 +589,9 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        #[cfg(feature = "certora")]
+        #[cfg(feature = "certora_any")]
         let accumulation_record = AccumulationRecord::nondet();
-        #[cfg(not(feature = "certora"))]
+        #[cfg(not(feature = "certora_any"))]
         let accumulation_record = self.calculate_interest(snapshot_limit);
 
 
