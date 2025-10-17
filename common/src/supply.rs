@@ -144,10 +144,11 @@ impl<M: Deref<Target = Market>> SupplyPositionRef<M> {
 
     pub fn calculate_yield(&self, snapshot_limit: u32) -> AccumulationRecord<BorrowAsset> {
         let mut next_snapshot_index = self.position.borrow_asset_yield.get_next_snapshot_index();
-
+        clog!(next_snapshot_index);
         let mut amount = u128::from(self.position.borrow_asset_deposit.active);
         let mut accumulated = Decimal::ZERO;
         let mut next_incoming = 0;
+        clog!(self.market.finalized_snapshots.len());
 
         #[allow(
             clippy::cast_possible_truncation,
@@ -176,11 +177,12 @@ impl<M: Deref<Target = Market>> SupplyPositionRef<M> {
                 accumulated += amount * Decimal::from(snapshot.yield_distribution())
                     / Decimal::from(snapshot.borrow_asset_deposited_active);
             }
-
             next_snapshot_index = i as u32 + 1;
-            clog!(next_snapshot_index);
         }
 
+        clog!(accumulated.fractional_part_as_u128_dividend());
+        clog!(accumulated.to_u128_floor().unwrap());
+        clog!(next_snapshot_index);
         AccumulationRecord {
             // Accumulated amount is derived from real balances, so it should
             // never overflow underlying data type.
@@ -309,6 +311,7 @@ impl<'a> SupplyPositionGuard<'a> {
         self.market.snapshot();
 
         let accumulation_record = self.calculate_yield(snapshot_limit);
+        clog!(accumulation_record.next_snapshot_index);
         self.activate_incoming(accumulation_record.next_snapshot_index);
 
         #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]

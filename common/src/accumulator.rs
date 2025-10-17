@@ -1,3 +1,4 @@
+use cvlr::clog;
 use near_sdk::{json_types::U128, near, require};
 
 use crate::{
@@ -99,6 +100,7 @@ impl<T: AssetClass> Accumulator<T> {
     where
         T: PartialOrd,
     {
+        clog!(next_snapshot_index);
         require!(
             next_snapshot_index >= self.next_snapshot_index,
             "Invariant violation: Asset accumulations cannot occur retroactively.",
@@ -108,6 +110,7 @@ impl<T: AssetClass> Accumulator<T> {
             amount.join(1u128)?;
         }
         self.add_once(amount)?;
+        clog!(self.total.amount.0);
         self.fraction_as_u128_dividend.0 = fraction;
         self.next_snapshot_index = next_snapshot_index;
         Some(())
