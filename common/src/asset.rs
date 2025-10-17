@@ -8,8 +8,10 @@ use near_sdk::{
     serde_json::{self, json},
     AccountId, Gas, NearToken, Promise,
 };
+use crate::number::Decimal;
 
-use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}, number::Decimal};
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
@@ -21,6 +23,7 @@ pub struct FungibleAsset<T: AssetClass> {
     kind: FungibleAssetKind,
 }
 
+#[cfg(feature = "certora_any")]
 impl<T: AssetClass> TemplarNondet for FungibleAsset<T> {
     fn nondet() -> Self {
         FungibleAsset { discriminant: PhantomData, kind: TemplarNondet::nondet() }
@@ -37,6 +40,7 @@ enum FungibleAssetKind {
     },
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     FungibleAssetKind,
     nondet_choice!(
@@ -204,6 +208,7 @@ pub struct FungibleAssetAmount<T: AssetClass> {
     discriminant: PhantomData<T>,
 }
 
+#[cfg(feature = "certora_any")]
 impl <T: AssetClass> TemplarNondet for FungibleAssetAmount<T> {
     fn nondet() -> Self {
         Self {

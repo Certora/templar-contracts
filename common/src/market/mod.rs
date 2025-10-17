@@ -1,8 +1,12 @@
+#[cfg(not(feature = "certora_any"))]
+use std::collections::HashMap;
 use std::num::NonZeroU16;
 
 use near_sdk::{env, near, AccountId};
 
-use crate::{asset::BorrowAssetAmount, models::{self, templar_nondet::{declare_nondet, TemplarNondet}}, number::Decimal};
+#[cfg(feature = "certora_any")]
+use crate::models::{templar_nondet::{declare_nondet, TemplarNondet}, hash_map::HashMap};
+use crate::{asset::BorrowAssetAmount, number::Decimal};
 mod configuration;
 pub use configuration::{MarketConfiguration, APY_LIMIT};
 mod external;
@@ -22,7 +26,7 @@ pub mod error {
 pub struct BorrowAssetMetrics {
     pub available: BorrowAssetAmount,
     pub deposited_active: BorrowAssetAmount,
-    pub deposited_incoming: models::hash_map::HashMap<u32, BorrowAssetAmount>,
+    pub deposited_incoming: HashMap<u32, BorrowAssetAmount>,
     pub borrowed: BorrowAssetAmount,
 }
 
@@ -30,9 +34,10 @@ pub struct BorrowAssetMetrics {
 #[near(serializers = [json, borsh])]
 pub struct YieldWeights {
     pub supply: NonZeroU16,
-    pub r#static: models::hash_map::HashMap<AccountId, u16>, // Meeting notes: maybe we assume this is empty
+    pub r#static: HashMap<AccountId, u16>, // Meeting notes: maybe we assume this is empty
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(YieldWeights,
     supply, r#static => YieldWeights { supply, r#static }
 );
@@ -44,7 +49,7 @@ impl YieldWeights {
     pub fn new_with_supply_weight(supply: u16) -> Self {
         Self {
             supply: supply.try_into().unwrap(),
-            r#static: models::hash_map::HashMap::new(std::collections::HashMap::new()),
+            r#static: HashMap::new(),
         }
     }
 
@@ -91,6 +96,7 @@ pub struct WithdrawalResolution {
     pub amount_to_fees: BorrowAssetAmount,
 }
 
+#[cfg(feature = "certora_any")]
 impl TemplarNondet for WithdrawalResolution {
     fn nondet() -> Self {
         WithdrawalResolution {

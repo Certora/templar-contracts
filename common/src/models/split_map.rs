@@ -112,7 +112,7 @@ where
         }
     }
 
-    pub fn new(_d: T) -> Self {
+    pub fn new() -> Self {
         Self {
             d: PhantomData,
             the_x: K::nondet(),

@@ -8,12 +8,13 @@ use crate::{
     asset_op,
     event::MarketEvent,
     market::Market,
-    models::templar_nondet::declare_nondet,
     number::Decimal,
     price::PricePair,
     MS_IN_A_YEAR,
 };
-use crate::models::templar_nondet::TemplarNondet;
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
 /// This struct can only be constructed after accumulating interest on a
 /// borrow position. This serves as proof that the interest has accrued, so it
@@ -28,6 +29,7 @@ impl InterestAccumulationProof {
     }
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(InterestAccumulationProof, InterestAccumulationProof(()));
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -392,7 +394,7 @@ pub(crate) fn calculate_interest(
         result
     }
 
-    #[cfg(all(not(feature = "certora"), feature = "certora_nonhealth"))]
+    #[cfg(not(feature = "certora"))]
     pub fn satisfies_mcr_maintenance(
         &self, 
         price_pair: &PricePair
@@ -587,14 +589,13 @@ impl<'a> BorrowPositionGuard<'a> {
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
         self.market.snapshot();
 
-        let accumulation_record = if cfg!(any(feature = "certora", feature = "certora_nonhealth")) {
-            AccumulationRecord::nondet()
-         } else { 
-            self.calculate_interest(snapshot_limit)
-         };
+        #[cfg(feature = "certora")]
+        let accumulation_record = AccumulationRecord::nondet();
+        #[cfg(not(feature = "certora"))]
+        let accumulation_record = self.calculate_interest(snapshot_limit);
 
 
-        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
+        #[cfg(not(feature = "certora_any"))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::InterestAccumulated {
                 account_id: self.account_id.clone(),

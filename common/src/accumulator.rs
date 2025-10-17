@@ -2,8 +2,10 @@ use near_sdk::{json_types::U128, near, require};
 
 use crate::{
     asset::{AssetClass, BorrowAsset, FungibleAssetAmount},
-    models::templar_nondet::TemplarNondet,
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::TemplarNondet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
@@ -122,6 +124,7 @@ pub struct AccumulationRecord<T: AssetClass> {
     pub(crate) next_snapshot_index: u32,
 }
 
+#[cfg(feature = "certora_any")]
 impl TemplarNondet for AccumulationRecord<BorrowAsset> {
     fn nondet() -> Self {
         AccumulationRecord {

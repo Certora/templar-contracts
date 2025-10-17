@@ -24,9 +24,10 @@ use near_sdk::{
     near,
 };
 
+#[cfg(feature = "certora_any")]
 use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
-#[cfg(feature = "certora")]
+#[cfg(feature = "certora_any")]
 #[near(serializers = [borsh, json])]
 #[derive(Clone)]
 pub struct OracleResponse {
@@ -37,7 +38,7 @@ pub struct OracleResponse {
     pub bot: std::cell::RefCell<Option<Price>> ,
 }
 
-#[cfg(feature = "certora")]
+#[cfg(feature = "certora_any")]
 impl OracleResponse {
     pub fn get(&self, asset: &PriceIdentifier) -> Option<&Option<Price>> {
         if *asset == self.asset1 {
@@ -53,11 +54,11 @@ impl OracleResponse {
     }
 }
 
-#[cfg(not(feature = "certora"))]
+#[cfg(not(feature = "certora_any"))]
 pub type OracleResponse = HashMap<PriceIdentifier, Option<Price>>;
 
 #[derive(Debug, Clone, Copy, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(not(feature = "certora"), derive(PartialEq))]
+#[cfg_attr(not(feature = "certora_any"), derive(PartialEq))]
 #[near(serializers = [borsh, json])]
 pub struct PriceIdentifier(
     #[serde(
@@ -67,7 +68,7 @@ pub struct PriceIdentifier(
     pub [u8; 32],
 );
 
-#[cfg(feature = "certora")]
+#[cfg(feature = "certora_any")]
 impl PartialEq for PriceIdentifier {
     #[inline(never)]
     fn eq(&self, other: &Self) -> bool {
@@ -82,7 +83,7 @@ impl PartialEq for PriceIdentifier {
     }
 }
 
-
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     PriceIdentifier, arr => PriceIdentifier(arr)
 );
@@ -113,6 +114,7 @@ pub struct Price {
     pub publish_time: i64,
 }
 
+#[cfg(feature = "certora_any")]
 impl TemplarNondet for Price {
     #[inline(never)]
     fn nondet() -> Self {

@@ -4,10 +4,12 @@ use primitive_types::U256;
 
 use crate::{
     asset::{AssetClass, BorrowAsset, CollateralAsset, FungibleAssetAmount},
-    models::templar_nondet::TemplarNondet,
     number::Decimal,
     oracle::pyth,
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::TemplarNondet;
 
 #[derive(Eq, Clone, Debug)]
 #[cfg_attr(not(feature = "certora"), derive(PartialEq))]
@@ -30,6 +32,7 @@ impl <T: AssetClass> PartialEq for Price<T> {
     }
 }
 
+#[cfg(feature = "certora_any")]
 impl<T: AssetClass> TemplarNondet for crate::price::Price<T> {
     #[inline(never)]
     fn nondet() -> Self {
@@ -97,6 +100,7 @@ impl PartialEq for PricePair {
     }
 }
 
+#[cfg(feature = "certora_any")]
 impl TemplarNondet for PricePair {
     #[inline(never)]
     fn nondet() -> Self {

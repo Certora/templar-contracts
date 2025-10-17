@@ -1,6 +1,11 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::{env, near, BorshStorageKey, IntoStorageKey};
-use crate::models::{self, templar_nondet::TemplarNondet};
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::TemplarNondet;
+#[cfg(feature = "certora_any")]
+use crate::models::{vec::Vec, vector::Vector};
+#[cfg(not(feature = "certora_any"))]
+use near_sdk::store::Vector;
 
 #[derive(Debug, Clone, Copy, BorshSerialize, BorshStorageKey, PartialEq, Eq, PartialOrd, Ord)]
 enum StorageKey {
@@ -9,13 +14,14 @@ enum StorageKey {
 
 /// Represents an append-only iterable list that stores multiple items per
 /// storage slot to reduce gas cost when reading.
-//#[derive(Debug)]
+#[cfg_attr(not(feature = "certora_any"), derive(Debug))]
 #[near(serializers = [borsh])]
 pub struct ChunkedAppendOnlyList<T: BorshSerialize + BorshDeserialize, const CHUNK_SIZE: u32> {
-    inner: models::vector::Vector<models::vec::Vec<T>>,
+    inner: Vector<Vec<T>>,
     last_chunk_next_index: u32,
 }
 
+#[cfg(feature = "certora_any")]
 impl<T: BorshDeserialize + BorshSerialize + TemplarNondet, const CHUNK_SIZE: u32> TemplarNondet for ChunkedAppendOnlyList<T, CHUNK_SIZE> {
     fn nondet() -> Self {
         Self {
@@ -25,12 +31,22 @@ impl<T: BorshDeserialize + BorshSerialize + TemplarNondet, const CHUNK_SIZE: u32
     }
 }
 
-impl<T: BorshSerialize + BorshDeserialize + TemplarNondet + Clone, const CHUNK_SIZE: u32>
+#[cfg(feature = "certora_any")]
+pub trait ChunkedAppendOnlyListParam: BorshSerialize + BorshDeserialize + TemplarNondet {}
+#[cfg(feature = "certora_any")]
+impl <T: BorshSerialize + BorshDeserialize + TemplarNondet> ChunkedAppendOnlyListParam for T {}
+
+#[cfg(not(feature = "certora_any"))]
+pub trait ChunkedAppendOnlyListParam: BorshSerialize + BorshDeserialize {}
+#[cfg(not(feature = "certora_any"))]
+impl <T: BorshSerialize + BorshDeserialize> ChunkedAppendOnlyListParam for T {}
+
+impl<T: ChunkedAppendOnlyListParam + Clone, const CHUNK_SIZE: u32>
     ChunkedAppendOnlyList<T, CHUNK_SIZE>
 {
     pub fn new(prefix: impl IntoStorageKey) -> Self {
         Self {
-            inner: models::vector::Vector::new(
+            inner: Vector::new(
                 [
                     prefix.into_storage_key(),
                     StorageKey::Inner.into_storage_key(),
@@ -59,8 +75,17 @@ impl<T: BorshSerialize + BorshDeserialize + TemplarNondet + Clone, const CHUNK_S
 
     pub fn push(&mut self, item: T) {
         if self.last_chunk_next_index == 0 {
-            let v = models::vec::Vec::new(vec![item]);
-            self.inner.push(v);
+            #[cfg(feature = "certora_any")]
+            {
+                let mut v = Vec::new(); 
+                v.push(item);
+                self.inner.push(v);
+            }
+            #[cfg(not(feature = "certora_any"))]
+            {
+                let v = vec![item];
+                self.inner.push(v);
+            }
         } else {
             let last_inner = self
                 .inner
@@ -108,7 +133,7 @@ impl<T: BorshSerialize + BorshDeserialize + TemplarNondet + Clone, const CHUNK_S
     }
 }
 
-impl<'a, T: BorshSerialize + BorshDeserialize + Clone + TemplarNondet, const CHUNK_SIZE: u32> IntoIterator
+impl<'a, T: ChunkedAppendOnlyListParam + Clone, const CHUNK_SIZE: u32> IntoIterator
     for &'a ChunkedAppendOnlyList<T, CHUNK_SIZE>
 {
     type Item = &'a T;
@@ -120,13 +145,13 @@ impl<'a, T: BorshSerialize + BorshDeserialize + Clone + TemplarNondet, const CHU
     }
 }
 
-pub struct Iter<'a, T: BorshSerialize + BorshDeserialize, const CHUNK_SIZE: u32> {
+pub struct Iter<'a, T: ChunkedAppendOnlyListParam, const CHUNK_SIZE: u32> {
     list: &'a ChunkedAppendOnlyList<T, CHUNK_SIZE>,
     next_index: u32,
     until_index: u32,
 }
 
-impl<'a, T: BorshSerialize + BorshDeserialize + Clone + TemplarNondet, const CHUNK_SIZE: u32> Iterator
+impl<'a, T: ChunkedAppendOnlyListParam + Clone, const CHUNK_SIZE: u32> Iterator
     for Iter<'a, T, CHUNK_SIZE>
 {
     type Item = &'a T;
@@ -151,7 +176,7 @@ impl<'a, T: BorshSerialize + BorshDeserialize + Clone + TemplarNondet, const CHU
     }
 }
 
-impl<T: BorshSerialize + BorshDeserialize + Clone + TemplarNondet, const CHUNK_SIZE: u32> DoubleEndedIterator
+impl<T: ChunkedAppendOnlyListParam + Clone, const CHUNK_SIZE: u32> DoubleEndedIterator
     for Iter<'_, T, CHUNK_SIZE>
 {
     fn next_back(&mut self) -> Option<Self::Item> {

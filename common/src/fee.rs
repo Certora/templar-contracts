@@ -1,8 +1,11 @@
 use near_sdk::{json_types::U64, near};
 
 use crate::{
-    asset::{AssetClass, FungibleAssetAmount}, models::templar_nondet::{nondet_choice, TemplarNondet}, number::Decimal
+    asset::{AssetClass, FungibleAssetAmount}, number::Decimal
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{nondet_choice, TemplarNondet};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
@@ -11,6 +14,7 @@ pub enum Fee<T: AssetClass> {
     Proportional(Decimal),
 }
 
+#[cfg(feature = "certora_any")]
 impl<T: AssetClass> TemplarNondet for Fee<T> {
     fn nondet() -> Self {
         nondet_choice!(
@@ -43,6 +47,7 @@ pub struct TimeBasedFee<T: AssetClass> {
     pub behavior: TimeBasedFeeFunction,
 }
 
+#[cfg(feature = "certora_any")]
 impl <T: AssetClass> TemplarNondet for TimeBasedFee<T> {
     fn nondet() -> Self {
         Self {

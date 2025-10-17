@@ -2,7 +2,10 @@ use std::ops::Deref;
 
 use near_sdk::{near, require};
 
-use crate::{models::templar_nondet::*, number::Decimal};
+use crate::number::Decimal;
+
+#[cfg(feature = "certora_any")]
+use crate::{models::templar_nondet::*};
 
 pub trait UsageCurve {
     fn at(&self, usage_ratio: Decimal) -> Decimal;
@@ -16,6 +19,7 @@ pub enum InterestRateStrategy {
     Exponential2(Exponential2),
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(InterestRateStrategy, {
     nondet_choice!(
         Self::Linear(Linear {
@@ -97,12 +101,14 @@ impl Linear {
 }
 
 impl UsageCurve for Linear {
+    #[cfg(feature = "certora")]
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        if cfg!(feature = "certora") {
-            Decimal::nondet()
-        } else {
-            usage_ratio * (self.top - self.base) + self.base
-        }
+        Decimal::nondet()
+    }
+
+    #[cfg(not(feature = "certora"))]
+    fn at(&self, usage_ratio: Decimal) -> Decimal {
+        usage_ratio * (self.top - self.base) + self.base
     }
 }
 
@@ -143,20 +149,22 @@ impl Piecewise {
 }
 
 impl UsageCurve for Piecewise {
+    #[cfg(feature = "certora")]
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        if cfg!(feature = "certora") {
-            Decimal::nondet()
-        } else {
-            require!(
-                usage_ratio <= Decimal::ONE,
-                "Invariant violation: Usage ratio cannot be over 100%.",
-            );
+        Decimal::nondet()
+    }
 
-            if usage_ratio < self.params.optimal {
-                self.params.rate_1 * usage_ratio + self.params.base
-            } else {
-                self.params.rate_2 * usage_ratio - self.i_negative_rate_2_b
-            }
+    #[cfg(not(feature = "certora"))]
+    fn at(&self, usage_ratio: Decimal) -> Decimal {
+        require!(
+            usage_ratio <= Decimal::ONE,
+            "Invariant violation: Usage ratio cannot be over 100%.",
+        );
+
+        if usage_ratio < self.params.optimal {
+            self.params.rate_1 * usage_ratio + self.params.base
+        } else {
+            self.params.rate_2 * usage_ratio - self.i_negative_rate_2_b
         }
     }
 }
@@ -170,6 +178,7 @@ pub struct PiecewiseParams {
     rate_2: Decimal,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     PiecewiseParams,
     base, optimal, rate_1, rate_2 => PiecewiseParams { base, optimal, rate_1, rate_2 }
@@ -232,19 +241,20 @@ impl Exponential2 {
 }
 
 impl UsageCurve for Exponential2 {
+    #[cfg(feature = "certora")]
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        if cfg!(feature = "certora") {
-            Decimal::nondet()
-        } else {
-            require!(
-                usage_ratio <= Decimal::ONE,
-                "Invariant violation: Usage ratio cannot be over 100%.",
-            );
-            #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
-            return self.params.base
-                + self.i_factor
-                    * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32);
-        }
+        Decimal::nondet()
+    }
+    #[cfg(not(feature = "certora"))]
+    fn at(&self, usage_ratio: Decimal) -> Decimal {
+        require!(
+            usage_ratio <= Decimal::ONE,
+            "Invariant violation: Usage ratio cannot be over 100%.",
+        );
+        #[allow(clippy::unwrap_used, reason = "Invariant checked above")]
+        return self.params.base
+            + self.i_factor
+                * ((self.params.eccentricity * usage_ratio).pow2().unwrap() - 1u32);
     }
 }
 
@@ -256,6 +266,7 @@ pub struct Exponential2Params {
     eccentricity: Decimal,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     Exponential2Params,
     base, top, eccentricity =>

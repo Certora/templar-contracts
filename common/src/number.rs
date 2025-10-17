@@ -11,6 +11,7 @@ use near_sdk::{
 use primitive_types::U512;
 use schemars::JsonSchema;
 
+#[cfg(feature = "certora_any")]
 use crate::models::templar_nondet::*;
 
 pub const FRACTIONAL_BITS: usize = 128;
@@ -23,7 +24,7 @@ pub const WHOLE_DECIMAL_DIGITS: usize = 115;
 fn u512_pow10(mut exponent: u32) -> U512 {
     let mut y = U512::one();
     let mut x = U512::from(10);
-
+    
     while exponent > 1 {
         if exponent % 2 == 1 {
             y *= x;
@@ -31,7 +32,7 @@ fn u512_pow10(mut exponent: u32) -> U512 {
         x *= x;
         exponent >>= 1;
     }
-
+    
     x * y
 }
 
@@ -47,6 +48,7 @@ pub struct Decimal {
     repr: U512,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     Decimal, repr => Decimal { repr }
 );
@@ -61,7 +63,7 @@ impl JsonSchema for Decimal {
     fn schema_name() -> String {
         "Decimal".to_string()
     }
-
+    
     fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
         let mut schema = gen.subschema_for::<String>().into_object();
         schema.metadata().description = Some("512-bit fixed-precision decimal".to_string());
@@ -73,13 +75,13 @@ impl JsonSchema for Decimal {
 impl BorshSchema for Decimal {
     fn add_definitions_recursively(
         definitions: &mut std::collections::BTreeMap<
-            near_sdk::borsh::schema::Declaration,
-            near_sdk::borsh::schema::Definition,
+        near_sdk::borsh::schema::Declaration,
+        near_sdk::borsh::schema::Definition,
         >,
     ) {
         <[u64; 8] as BorshSchema>::add_definitions_recursively(definitions);
     }
-
+    
     fn declaration() -> near_sdk::borsh::schema::Declaration {
         String::from("Decimal")
     }
@@ -102,7 +104,7 @@ impl BorshDeserialize for Decimal {
 impl Serialize for Decimal {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: near_sdk::serde::Serializer,
+    S: near_sdk::serde::Serializer,
     {
         serializer.serialize_str(&self.to_fixed(FRACTIONAL_DECIMAL_DIGITS))
     }
@@ -111,7 +113,7 @@ impl Serialize for Decimal {
 impl<'de> Deserialize<'de> for Decimal {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+    D: serde::Deserializer<'de>,
     {
         let s = <String as serde::Deserialize>::deserialize(deserializer)?;
         Decimal::from_str(&s).map_err(serde::de::Error::custom)
@@ -122,10 +124,10 @@ impl Decimal {
     /// When converting to and from strings, we do not guarantee accurate
     /// representation of bits lower than this.
     const REPR_EPSILON: U512 = U512([0b1000, 0, 0, 0, 0, 0, 0, 0]);
-
+    
     pub const MAX: Self = Self { repr: U512::MAX };
     pub const MIN: Self = Self { repr: U512::zero() };
-
+    
     pub const ZERO: Self = Self { repr: U512::zero() };
     pub const ONE_HALF: Self = Self {
         repr: U512([0, 0x8000_0000_0000_0000, 0, 0, 0, 0, 0, 0]),
@@ -144,35 +146,35 @@ impl Decimal {
     pub const E: Self = Self {
         repr: U512([0xBF71_5880_9CF4_F3C9, 0xB7E1_5162_8AED_2A6A, 2, 0, 0, 0, 0, 0]),
     };
-
+    
     pub fn as_repr(self) -> [u64; 8] {
         self.repr.0
     }
-
+    
     pub fn is_zero(&self) -> bool {
         self.repr.is_zero()
     }
-
+    
     pub fn near_equal(self, other: Self) -> bool {
         self.abs_diff(other).repr <= Self::REPR_EPSILON
     }
-
+    
     #[must_use]
     pub fn pow(self, mut exponent: i32) -> Self {
         if exponent == 0 {
             return Self::ONE;
         }
-
+        
         let exponent_is_negative = if exponent < 0 {
             exponent = -exponent;
             true
         } else {
             false
         };
-
+        
         let mut y = Self::ONE;
         let mut x = self;
-
+        
         while exponent > 1 {
             if exponent % 2 == 1 {
                 y *= x;
@@ -180,16 +182,16 @@ impl Decimal {
             x *= x;
             exponent >>= 1;
         }
-
+        
         let result = x * y;
-
+        
         if exponent_is_negative {
             Decimal::ONE / result
         } else {
             result
         }
     }
-
+    
     /// Calculates `2^exponent`.
     pub fn pow2_int(exponent: u32) -> Option<Self> {
         #[allow(clippy::cast_possible_truncation)]
@@ -201,15 +203,15 @@ impl Decimal {
             })
         }
     }
-
+    
     fn pow2_frac(self) -> Self {
         const MAX_ITERATIONS: u32 = 35; // n=35 is smallest n where n! >= 2^128
         debug_assert!(self <= Self::ONE);
-
+        
         let mut sum = Self::ONE;
         let mut term = Self::ONE;
         let numerator = self * Self::LN2;
-
+        
         for n in 1..=MAX_ITERATIONS {
             term *= numerator / n;
             if term == Self::ZERO {
@@ -217,28 +219,28 @@ impl Decimal {
             }
             sum += &term;
         }
-
+        
         sum
     }
-
+    
     pub fn pow2(self) -> Option<Self> {
         let whole = u32::try_from(self.to_u128_floor()?).ok()?;
         let frac = self - whole;
-
+        
         Some(Self::pow2_int(whole)? * Self::pow2_frac(frac))
     }
-
+    
     #[must_use]
     pub fn mul_pow10(self, exponent: i32) -> Option<Self> {
         if exponent == 0 || self.is_zero() {
             return Some(self);
         }
-
+        
         let abs_exponent = exponent.abs_diff(0);
         if (abs_exponent as usize) > WHOLE_DECIMAL_DIGITS + FRACTIONAL_DECIMAL_DIGITS {
             return None;
         }
-
+        
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         if exponent >= 0 {
             let operand = u512_pow10(abs_exponent);
@@ -257,10 +259,10 @@ impl Decimal {
                 return Some(Self { repr });
             }
         }
-
+        
         None
     }
-
+    
     #[must_use]
     pub fn abs_diff(self, other: Self) -> Self {
         if self > other {
@@ -269,37 +271,41 @@ impl Decimal {
             other - self
         }
     }
-
+    
+    #[cfg(feature = "certora")]
     pub fn to_u128_floor(self) -> Option<u128> {
-        if cfg!(feature = "certora") {
-            TemplarNondet::nondet()
+        TemplarNondet::nondet()
+    }
+    
+    #[cfg(not(feature = "certora"))]
+    pub fn to_u128_floor(self) -> Option<u128> {
+        let truncated = self.repr >> FRACTIONAL_BITS;
+        if truncated.bits() <= 128 {
+            Some(truncated.as_u128())
         } else {
-            let truncated = self.repr >> FRACTIONAL_BITS;
-            if truncated.bits() <= 128 {
+            None
+        }
+    }
+    
+    #[cfg(feature = "certora")]
+    pub fn to_u128_ceil(self) -> Option<u128> {
+        TemplarNondet::nondet()
+    }
+    
+    #[cfg(not(feature = "certora"))]
+    pub fn to_u128_ceil(self) -> Option<u128> {
+        let truncated = self.repr >> FRACTIONAL_BITS;
+        if truncated.bits() <= 128 {
+            if self.fractional_part().is_zero() {
                 Some(truncated.as_u128())
             } else {
-                None
+                truncated.as_u128().checked_add(1)
             }
-        }
-    }
-
-    pub fn to_u128_ceil(self) -> Option<u128> {
-        if cfg!(feature = "certora") {
-            TemplarNondet::nondet()
         } else {
-            let truncated = self.repr >> FRACTIONAL_BITS;
-            if truncated.bits() <= 128 {
-                if self.fractional_part().is_zero() {
-                    Some(truncated.as_u128())
-                } else {
-                    truncated.as_u128().checked_add(1)
-                }
-            } else {
-                None
-            }
+            None
         }
     }
-
+    
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,
@@ -310,10 +316,10 @@ impl Decimal {
         let frac = self.repr.low_u128() as f64 / 2f64.powi(FRACTIONAL_BITS as i32);
         let low = (self.repr >> FRACTIONAL_BITS).low_u128() as f64;
         let high = (self.repr >> (FRACTIONAL_BITS * 2)).low_u128() as f64 * 2f64.powi(128);
-
+        
         high + low + frac
     }
-
+    
     pub fn to_fixed(&self, precision: usize) -> String {
         let precision = precision.min(FRACTIONAL_DECIMAL_DIGITS);
         let (fractional_part, overflow) = self.fractional_part_to_dec_string(precision, false);
@@ -329,48 +335,48 @@ impl Decimal {
             format!("{}.{fractional_part_trimmed}", repr >> FRACTIONAL_BITS)
         }
     }
-
+    
     fn fractional_part(&self) -> U512 {
         U512([self.repr.0[0], self.repr.0[1], 0, 0, 0, 0, 0, 0])
     }
-
+    
     pub fn fractional_part_as_u128_dividend(&self) -> u128 {
         u128::from(self.repr.0[0]) | (u128::from(self.repr.0[1]) << 64)
     }
-
+    
     fn epsilon_round(repr: U512) -> U512 {
         (repr + (Self::REPR_EPSILON >> 1)) & !(Self::REPR_EPSILON - 1)
     }
-
+    
     fn fractional_part_to_dec_string(&self, precision: usize, round_up: bool) -> (String, bool) {
         let mut s = Vec::with_capacity(precision);
         let mut f = self.fractional_part();
         let mut overflow = false;
-
+        
         if round_up {
             let plus_two = f.saturating_add(2.into());
             overflow = plus_two.0[2] != 0;
             f = U512([plus_two.0[0], plus_two.0[1], 0, 0, 0, 0, 0, 0]);
         }
-
+        
         for _ in 0..precision {
             if f.is_zero() {
                 break;
             }
-
+            
             f *= 10;
-
+            
             let digit = (f / Self::ONE.repr).low_u64();
             #[allow(clippy::cast_possible_truncation)]
             s.push(digit as u8 + b'0');
-
+            
             f %= Self::ONE.repr;
         }
-
+        
         if !round_up && !f.is_zero() && (U512::MAX - 2 >= self.repr) {
             return self.fractional_part_to_dec_string(precision, true);
         }
-
+        
         // Safety: all digits are guaranteed to be in range 0x30..=0x39
         (unsafe { String::from_utf8_unchecked(s) }, overflow)
     }
@@ -378,7 +384,7 @@ impl Decimal {
 
 pub mod error {
     use thiserror::Error;
-
+    
     #[derive(Debug, Error)]
     #[error("Failed to parse decimal")]
     pub struct DecimalParseError;
@@ -386,21 +392,21 @@ pub mod error {
 
 impl FromStr for Decimal {
     type Err = error::DecimalParseError;
-
+    
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (whole, frac) = if let Some((whole, frac)) = s.split_once('.') {
             (whole, Some(frac))
         } else {
             (s, None)
         };
-
+        
         let whole =
-            U512::from_dec_str(whole).map_err(|_| error::DecimalParseError)? << FRACTIONAL_BITS;
-
+        U512::from_dec_str(whole).map_err(|_| error::DecimalParseError)? << FRACTIONAL_BITS;
+        
         if let Some(frac) = frac {
             let mut f = U512::zero();
             let mut div = 10u128;
-
+            
             for c in frac.chars().take(FRACTIONAL_DECIMAL_DIGITS) {
                 if let Some(d) = c.to_digit(10) {
                     if d != 0 {
@@ -416,7 +422,7 @@ impl FromStr for Decimal {
                     break;
                 }
             }
-
+            
             Ok(Self {
                 repr: whole.saturating_add(Decimal::epsilon_round(f >> FRACTIONAL_BITS)),
             })
@@ -442,68 +448,74 @@ macro_rules! impl_self {
     ($s:ty,$t:ty) => {
         impl Add<$t> for $s {
             type Output = Decimal;
-
+            
             fn add(self, rhs: $t) -> Self::Output {
                 Decimal {
                     repr: self.repr.add(rhs.repr),
                 }
             }
         }
-
+        
         impl Sub<$t> for $s {
             type Output = Decimal;
-
+            
+            #[cfg(feature = "certora")]
+            fn sub(self, _rhs: $t) -> Self::Output {
+                TemplarNondet::nondet()
+            }
+            
+            #[cfg(not(feature = "certora"))]
             fn sub(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    TemplarNondet::nondet()
-                } else {
-                    Decimal {
-                        repr: self.repr.sub(rhs.repr),
-                    }
+                Decimal {
+                    repr: self.repr.sub(rhs.repr),
                 }
             }
         }
-
+        
         impl Mul<$t> for $s {
             type Output = Decimal;
+            
+            #[cfg(feature = "certora")]
+            fn mul(self, _rhs: $t) -> Self::Output {
+                Self::Output::nondet()
+            }
 
+            #[cfg(not(feature = "certora"))]
             fn mul(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    Self::Output::nondet()
-                } else {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let mut shr = FRACTIONAL_BITS as u32;
-                    let shr_self = self.repr.trailing_zeros().min(shr);
-                    let self_repr = self.repr >> shr_self;
-                    shr -= shr_self;
-                    let shr_rhs = rhs.repr.trailing_zeros().min(shr);
-                    let rhs_repr = rhs.repr >> shr_rhs;
-                    shr -= shr_rhs;
-                    Decimal {
-                        repr: (self_repr * rhs_repr) >> shr,
-                    }
+                #[allow(clippy::cast_possible_truncation)]
+                let mut shr = FRACTIONAL_BITS as u32;
+                let shr_self = self.repr.trailing_zeros().min(shr);
+                let self_repr = self.repr >> shr_self;
+                shr -= shr_self;
+                let shr_rhs = rhs.repr.trailing_zeros().min(shr);
+                let rhs_repr = rhs.repr >> shr_rhs;
+                shr -= shr_rhs;
+                Decimal {
+                    repr: (self_repr * rhs_repr) >> shr,
                 }
             }
         }
-
+        
         impl Div<$t> for $s {
             type Output = Decimal;
-
+            
+            #[cfg(feature = "certora")]
+            fn div(self, _rhs: $t) -> Self::Output {
+                TemplarNondet::nondet()
+            }
+            
+            #[cfg(not(feature = "certora"))]
             fn div(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    TemplarNondet::nondet()
-                } else {
-                    #[allow(clippy::cast_possible_truncation)]
-                    let mut sh = FRACTIONAL_BITS as u32;
-                    let sh_self = self.repr.leading_zeros().min(sh);
-                    let self_repr = self.repr << sh_self;
-                    sh -= sh_self;
-                    let sh_rhs = rhs.repr.trailing_zeros().min(sh);
-                    let rhs_repr = rhs.repr >> sh_rhs;
-                    sh -= sh_rhs;
-                    Decimal {
-                        repr: (self_repr / rhs_repr) << sh,
-                    }
+                #[allow(clippy::cast_possible_truncation)]
+                let mut sh = FRACTIONAL_BITS as u32;
+                let sh_self = self.repr.leading_zeros().min(sh);
+                let self_repr = self.repr << sh_self;
+                sh -= sh_self;
+                let sh_rhs = rhs.repr.trailing_zeros().min(sh);
+                let rhs_repr = rhs.repr >> sh_rhs;
+                sh -= sh_rhs;
+                Decimal {
+                    repr: (self_repr / rhs_repr) << sh,
                 }
             }
         }
@@ -522,19 +534,19 @@ macro_rules! impl_self_assign {
                 self.repr += rhs.repr;
             }
         }
-
+        
         impl SubAssign<$t> for $s {
             fn sub_assign(&mut self, rhs: $t) {
                 self.repr -= rhs.repr;
             }
         }
-
+        
         impl DivAssign<$t> for $s {
             fn div_assign(&mut self, rhs: $t) {
                 self.repr = (*self / rhs).repr;
             }
         }
-
+        
         impl MulAssign<$t> for $s {
             fn mul_assign(&mut self, rhs: $t) {
                 self.repr = (*self * rhs).repr;
@@ -552,105 +564,112 @@ macro_rules! impl_int {
         impl_int!(@ops $t, Decimal);
         impl_int!(@ops $t, &Decimal);
     };
-
+    
     (@from $t:ty) => {
         impl From<$t> for Decimal {
+            #[cfg(feature = "certora")]
+            fn from(_value: $t) -> Self {
+                TemplarNondet::nondet()
+            }
+            
+            #[cfg(not(feature = "certora"))]
             fn from(value: $t) -> Self {
                 Self {
-                    repr: if cfg!(feature = "certora") {
-                        TemplarNondet::nondet()
-                    } else {
-                        U512::from(value) << FRACTIONAL_BITS
-                    }
+                    repr: U512::from(value) << FRACTIONAL_BITS
                 }
             }
         }
     };
-
+    
     (@ops $t:ty,$s:ty) => {
         impl Mul<$t> for $s {
             type Output = Decimal;
+            
+            #[cfg(feature = "certora")]
+            fn mul(self, _rhs: $t) -> Self::Output {
+                Self::Output::nondet()
+            }
 
+            #[cfg(not(feature = "certora"))]
             fn mul(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    Self::Output::nondet()
-                } else {
-                    Decimal { repr: self.repr * U512::from(rhs) }
-                }
-
+                Decimal { repr: self.repr * U512::from(rhs) }
             }
         }
-
+        
         impl Mul<$s> for $t {
             type Output = Decimal;
+            
+            #[cfg(feature = "certora")]
+            fn mul(self, _rhs: $s) -> Self::Output {
+                Self::Output::nondet()
+            }
 
+            #[cfg(not(feature = "certora"))]
             fn mul(self, rhs: $s) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    Self::Output::nondet()
-                } else {
-                    Decimal { repr: U512::from(self) * rhs.repr }
-                }
+                Decimal { repr: U512::from(self) * rhs.repr }
             }
         }
-
+        
         impl Div<$t> for $s {
             type Output = Decimal;
-
+            
             fn div(self, rhs: $t) -> Self::Output {
                 Decimal { repr: self.repr / U512::from(rhs) }
             }
         }
-
+        
         impl Div<$s> for $t {
             type Output = Decimal;
-
+            
             fn div(self, rhs: $s) -> Self::Output {
                 Decimal::from(self) / rhs
             }
         }
-
+        
         impl Add<$t> for $s {
             type Output = Decimal;
-
+            
             fn add(self, rhs: $t) -> Self::Output {
                 self + Decimal::from(rhs)
             }
         }
-
+        
         impl Add<$s> for $t {
             type Output = Decimal;
-
+            
             fn add(self, rhs: $s) -> Self::Output {
                 Decimal::from(self) + rhs
             }
         }
-
+        
         impl Sub<$t> for $s {
             type Output = Decimal;
-
+            
             fn sub(self, rhs: $t) -> Self::Output {
                 self - Decimal::from(rhs)
             }
         }
-
+        
         impl Sub<$s> for $t {
             type Output = Decimal;
+            
+            #[cfg(feature = "certora")]
+            fn sub(self, _rhs: $s) -> Self::Output {
+                Self::Output::nondet()
+            }
 
+            #[cfg(not(feature = "certora"))]
             fn sub(self, rhs: $s) -> Self::Output {
-                if cfg!(feature = "certora") {
-                    Self::Output::nondet()
-                } else {
-                    Decimal::from(self) - rhs
-                }
+                Decimal::from(self) - rhs
             }
         }
-
+        
         impl PartialEq<$t> for $s {
             fn eq(&self, other: &$t) -> bool {
                 self.repr == Decimal::from(*other).repr
             }
         }
-
+        
         impl PartialOrd<$t> for $s {
             fn partial_cmp(&self, other: &$t) -> Option<std::cmp::Ordering> {
                 self.repr.partial_cmp(&Decimal::from(*other).repr)
@@ -672,26 +691,26 @@ mod tests {
     use primitive_types::U256;
     use rand::Rng;
     use rstest::rstest;
-
+    
     use super::*;
-
+    
     // These functions are intentionally implemented using mathematical
     // operations instead of bitwise operations, so as to test the
     // correctness of the mathematical operators.
-
+    
     fn with_upper_u128(n: u128) -> Decimal {
         let mut d = Decimal::from(n);
         d *= Decimal::from(u128::pow(2, 64));
         d *= Decimal::from(u128::pow(2, 64));
         d
     }
-
+    
     fn get_upper_u128(mut d: Decimal) -> u128 {
         d /= Decimal::from(u128::pow(2, 64));
         d /= Decimal::from(u128::pow(2, 64));
         d.to_u128_floor().unwrap()
     }
-
+    
     #[rstest]
     #[case(0, 0)]
     #[case(0, 1)]
@@ -708,7 +727,7 @@ mod tests {
             a + b,
         );
     }
-
+    
     #[rstest]
     #[case(0, 0)]
     #[case(1, 0)]
@@ -726,7 +745,7 @@ mod tests {
             a - b,
         );
     }
-
+    
     #[rstest]
     #[case(0, 0)]
     #[case(0, 1)]
@@ -743,7 +762,7 @@ mod tests {
         assert_eq!(get_upper_u128(with_upper_u128(a) * b), a * b);
         assert_eq!(get_upper_u128(a * with_upper_u128(b)), a * b);
     }
-
+    
     #[rstest]
     #[case(0, 1)]
     #[case(1, 1)]
@@ -768,7 +787,7 @@ mod tests {
             quotient,
         ));
     }
-
+    
     #[rstest]
     #[case(12, 2)]
     #[case(2, 32)]
@@ -782,7 +801,7 @@ mod tests {
         let n_i32 = n as i32;
         assert_eq!(Decimal::from(x).pow(n_i32), Decimal::from(x.pow(n)));
     }
-
+    
     #[test]
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn pow10_valid_range() {
@@ -798,7 +817,7 @@ mod tests {
             None,
         );
     }
-
+    
     #[rstest]
     #[case(0, 0)]
     #[case(0, 1)]
@@ -824,12 +843,12 @@ mod tests {
             );
         } else {
             assert!(Decimal::from(x)
-                .mul_pow10(n)
-                .unwrap()
-                .near_equal(Decimal::from(x) / U256::exp10(-n as usize)));
+            .mul_pow10(n)
+            .unwrap()
+            .near_equal(Decimal::from(x) / U256::exp10(-n as usize)));
         }
     }
-
+    
     #[test]
     fn constants_are_accurate() {
         assert_eq!(Decimal::ZERO.to_u128_floor().unwrap(), 0);
@@ -837,7 +856,7 @@ mod tests {
         assert_eq!(Decimal::ONE.to_u128_floor().unwrap(), 1);
         assert_eq!(Decimal::TWO.to_u128_floor().unwrap(), 2);
     }
-
+    
     #[rstest]
     #[case(Decimal::ONE, 0)]
     #[case(Decimal::ONE_HALF, 1u128 << 127)]
@@ -845,7 +864,7 @@ mod tests {
     fn get_fractional_dividend(#[case] value: Decimal, #[case] expected: u128) {
         assert_eq!(value.fractional_part_as_u128_dividend(), expected);
     }
-
+    
     #[rstest]
     #[case(Decimal::ONE)]
     #[case(Decimal::TWO)]
@@ -857,51 +876,51 @@ mod tests {
     fn serialization(#[case] value: Decimal) {
         let serialized = serde_json::to_string(&value).unwrap();
         let deserialized: Decimal = serde_json::from_str(&serialized).unwrap();
-
+        
         assert!(value.near_equal(deserialized));
     }
-
+    
     #[test]
     fn from_self_string_serialization_precision() {
         const ITERATIONS: usize = 1_024;
         const TRANSFORMATIONS: usize = 16;
-
+        
         let mut rng = rand::thread_rng();
-
+        
         let mut max_error = U512::zero();
         let mut error_distribution = [0u32; 16];
         let mut value_with_max_error = Decimal::ZERO;
-
+        
         #[allow(clippy::cast_possible_truncation)]
         for _ in 0..ITERATIONS {
             let actual = Decimal {
                 repr: U512(rng.gen()),
             };
-
+            
             let mut s = actual.to_fixed(FRACTIONAL_DECIMAL_DIGITS);
             for _ in 0..(TRANSFORMATIONS - 1) {
                 s = Decimal::from_str(&s)
-                    .unwrap()
-                    .to_fixed(FRACTIONAL_DECIMAL_DIGITS);
+                .unwrap()
+                .to_fixed(FRACTIONAL_DECIMAL_DIGITS);
             }
             let parsed = Decimal::from_str(&s).unwrap();
-
+            
             let e = actual.abs_diff(parsed).repr;
-
+            
             if e > max_error {
                 max_error = e;
                 value_with_max_error = actual;
             }
-
+            
             error_distribution[e.0[0] as usize] += 1;
         }
-
+        
         println!("Error distribution:");
         for (i, x) in error_distribution.iter().enumerate() {
             println!("\t{i}: {x:b}");
         }
         println!("Max error: {:?}", max_error.0);
-
+        
         assert!(
             max_error <= Decimal::REPR_EPSILON,
             "Stringification error of repr {:?} is repr {:?}",
@@ -909,7 +928,7 @@ mod tests {
             max_error.0,
         );
     }
-
+    
     #[test]
     #[allow(clippy::cast_precision_loss)]
     fn from_f64_string_serialization_precision() {
@@ -919,66 +938,66 @@ mod tests {
             repr: Decimal::REPR_EPSILON,
         }
         .to_f64_lossy();
-
+        
         let t = |f: f64| {
             let actual = f.abs();
             let string = actual.to_string();
             let parsed = Decimal::from_str(&string).unwrap();
-
+            
             let e = (parsed.to_f64_lossy() - actual).abs();
-
+            
             assert!(e <= epsilon, "Stringification error of f64 {actual} is {e}");
         };
-
+        
         for _ in 0..ITERATIONS {
             t(rng.gen::<f64>() * rng.gen::<u128>() as f64);
         }
     }
-
+    
     #[test]
     fn round_up_repr() {
         let cases = [
-            Decimal {
-                #[rustfmt::skip]
-                repr: U512([ 0x0966_4E4C_9169_501F, 0xB226_2812_5CF2_3CD0, 1, 0, 0, 0, 0, 0 ]),
-            },
-            Decimal {
-                repr: U512([u64::MAX, u64::MAX, 1, 0, 0, 0, 0, 0]),
-                // 1.99999999999999999999999999999999999999706126412294428123007815865694438580...
-            },
-            Decimal {
-                repr: U512([u64::MAX - 1, u64::MAX, 1, 0, 0, 0, 0, 0]),
-            },
-            Decimal { repr: U512::MAX },
-            Decimal {
-                repr: U512::MAX.saturating_sub(U512::one()),
-            },
-            Decimal { repr: U512::zero() },
+        Decimal {
+            #[rustfmt::skip]
+            repr: U512([ 0x0966_4E4C_9169_501F, 0xB226_2812_5CF2_3CD0, 1, 0, 0, 0, 0, 0 ]),
+        },
+        Decimal {
+            repr: U512([u64::MAX, u64::MAX, 1, 0, 0, 0, 0, 0]),
+            // 1.99999999999999999999999999999999999999706126412294428123007815865694438580...
+        },
+        Decimal {
+            repr: U512([u64::MAX - 1, u64::MAX, 1, 0, 0, 0, 0, 0]),
+        },
+        Decimal { repr: U512::MAX },
+        Decimal {
+            repr: U512::MAX.saturating_sub(U512::one()),
+        },
+        Decimal { repr: U512::zero() },
         ];
-
+        
         for case in cases {
             let p: Decimal = case.to_fixed(FRACTIONAL_DECIMAL_DIGITS).parse().unwrap();
-
+            
             eprintln!("{:x?}", case.repr.0);
             eprintln!("{:x?}", p.repr.0);
             eprintln!("|{p:?} - {case:?}| = {:?}", p.abs_diff(case).as_repr());
-
+            
             assert!(p.near_equal(case));
         }
     }
-
+    
     #[test]
     fn round_up_str() {
         // Cases that are (generally) not evenly representable in binary fraction.
         let cases = [
-            "1",
-            "0",
-            "1.6958947224456518",
-            "2.79",
-            "0.6",
-            "10.6",
-            "0.01",
-            "0.599999999999999999999999999999999999",
+        "1",
+        "0",
+        "1.6958947224456518",
+        "2.79",
+        "0.6",
+        "10.6",
+        "0.01",
+        "0.599999999999999999999999999999999999",
         ];
         for case in cases {
             println!("Testing {case}...");

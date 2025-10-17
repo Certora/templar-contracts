@@ -24,5 +24,6 @@ rand = "0.8"
 workspace = true
 
 [features]
-certora = []
-certora_nonhealth = []
+certora = ["certora_any"]
+certora_nonhealth = ["certora_any"]
+certora_any = []

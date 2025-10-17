@@ -105,9 +105,9 @@ where
     K: Eq + std::hash::Hash + TemplarNondet,
     V: Eq + TemplarNondet + Clone,
 {
-    pub fn new(d: std::collections::HashMap<K,V>) -> Self {
+    pub fn new() -> Self {
         Self(
-            SplitMap::new(d)
+            SplitMap::new()
         )
     }
 

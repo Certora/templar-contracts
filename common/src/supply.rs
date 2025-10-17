@@ -2,11 +2,15 @@ use std::ops::{Deref, DerefMut};
 
 use cvlr::clog;
 use near_sdk::{env, json_types::U64, near, require, AccountId};
-use crate::models;
+#[cfg(feature = "certora_any")]
+use crate::{models::vec::Vec};
 
 use crate::{
     accumulator::{AccumulationRecord, Accumulator}, asset::{BorrowAsset, BorrowAssetAmount, FungibleAssetAmount}, asset_op, market::{Market, WithdrawalResolution}, number::Decimal
 };
+
+#[cfg(not(feature = "certora_any"))]
+use crate::event::MarketEvent;
 
 /// This struct can only be constructed after accumulating yield on a
 /// supply position. This serves as proof that the yield has accrued, so it
@@ -24,7 +28,7 @@ pub struct IncomingDeposit {
 #[near(serializers = [json, borsh])]
 pub struct Deposit {
     pub active: BorrowAssetAmount,
-    pub incoming: models::vec::Vec<IncomingDeposit> ,
+    pub incoming: Vec<IncomingDeposit> ,
     pub outgoing: BorrowAssetAmount,
 }
 
@@ -311,7 +315,7 @@ impl<'a> SupplyPositionGuard<'a> {
         let accumulation_record = self.calculate_yield(snapshot_limit);
         self.activate_incoming(accumulation_record.next_snapshot_index);
 
-        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
+        #[cfg(not(feature = "certora_any"))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::YieldAccumulated {
                 account_id: self.account_id.clone(),
@@ -389,7 +393,7 @@ impl<'a> SupplyPositionGuard<'a> {
         };
 
         if success {
-            #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
+            #[cfg(not(feature = "certora_any"))]
             MarketEvent::SupplyWithdrawn {
                 account_id: self.account_id.clone(),
                 borrow_asset_amount_to_account: withdrawal_resolution.amount_to_account,
@@ -417,7 +421,7 @@ impl<'a> SupplyPositionGuard<'a> {
 
         self.market.snapshot();
 
-        #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
+        #[cfg(not(feature = "certora_any"))]
         if !amount.is_zero() {
             MarketEvent::SupplyDeposited {
                 account_id: self.account_id.clone(),
