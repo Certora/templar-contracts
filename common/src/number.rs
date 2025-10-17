@@ -271,7 +271,6 @@ impl Decimal {
     }
 
     pub fn to_u128_floor(self) -> Option<u128> {
-        // if cfg!(feature = "certora") {
         if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             TemplarNondet::nondet()
         } else {

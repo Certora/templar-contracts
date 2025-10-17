@@ -9,6 +9,7 @@ use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
 use templar_common::market::{Market};
 use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
+use templar_common::number::Decimal;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
 use templar_market_contract::Contract;
@@ -34,6 +35,12 @@ pub fn accounts_can_be_neq() {
     let s = AccountId::nondet();
     let t = AccountId::nondet();
     cvlr_satisfy!(s != t);
+}
+#[rule]
+pub fn simple_decimal_rule() {
+    let half = Decimal::ONE_HALF;
+    let to_floor = half.to_u128_floor().unwrap();
+    cvlr_assert!(to_floor == 0);
 }
 
 #[rule]
