@@ -232,23 +232,41 @@ pub fn double_borrow_fails() {
 pub fn snapshot_with_yield_and_supplier_position() {
     let mut market = Market::nondet();
     let borrow_amount = BorrowAssetAmount::nondet();
-    let amount = borrow_amount.amount;
+    // let amount = borrow_amount.amount;
     let account = AccountId::nondet();
     let yield_pre;
     let mut position = SupplyPosition::nondet();
     let borrow_asset_deposit_active = position.get_deposit().active.amount.0;
     let borrow_asset_deposit_outgoing = position.get_deposit().outgoing.amount.0;
+    let borrow_asset_deposit_incoming: u128 = position.get_deposit().incoming.get(0).unwrap().amount.amount.0;  
     let borrow_asset_yield_total = position.borrow_asset_yield.total.amount.0;
     let borrow_asset_yield_next = position.borrow_asset_yield.next_snapshot_index;
     let borrow_asset_yield_fraction = position.borrow_asset_yield.fraction_as_u128_dividend.0;
-    
     clog!(borrow_amount.amount.0);
-    clog!(amount.0);
     clog!(borrow_asset_deposit_active);
     clog!(borrow_asset_deposit_outgoing);
+    clog!(borrow_asset_deposit_incoming);
     clog!(borrow_asset_yield_total);
     clog!(borrow_asset_yield_next);
     clog!(borrow_asset_yield_fraction);
+
+    let current_snapshot_pre: templar_common::snapshot::Snapshot = market.current_snapshot.clone();
+    clog!(current_snapshot_pre.borrow_asset_deposited_active().amount.0);
+    clog!(current_snapshot_pre.yield_distribution().amount.0);
+    clog!(current_snapshot_pre.end_timestamp_ms().0);
+    clog!(current_snapshot_pre.time_chunk().0.0);
+    clog!(current_snapshot_pre.borrow_asset_deposited_incoming().amount.0);
+
+    let first_finalized_snapshot_pre = market.finalized_snapshots.get(0).unwrap();
+    clog!(first_finalized_snapshot_pre.borrow_asset_deposited_active().amount.0);
+    clog!(first_finalized_snapshot_pre.yield_distribution().amount.0);
+    clog!(first_finalized_snapshot_pre.end_timestamp_ms().0);
+    clog!(first_finalized_snapshot_pre.time_chunk().0.0);
+    clog!(first_finalized_snapshot_pre.borrow_asset_deposited_incoming().amount.0);
+
+    let time_chunk_now = market.configuration.time_chunk_configuration.now();
+    clog!(time_chunk_now.0.0);
+    cvlr_assume!(time_chunk_now.0.0!=current_snapshot_pre.time_chunk().0.0);
 
     {
         let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position);
@@ -260,18 +278,34 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
         let borrow_asset_deposit_active_after_first = position.get_deposit().active.amount.0;
         let borrow_asset_deposit_outgoing_after_first = position.get_deposit().outgoing.amount.0;
+        let borrow_asset_deposit_incoming_after_first = position.get_deposit().incoming.get(0).unwrap().amount.amount.0;
         let borrow_asset_yield_total_after_first = position.borrow_asset_yield.total.amount.0;
         let borrow_asset_yield_next_after_first = position.borrow_asset_yield.next_snapshot_index;
         let borrow_asset_yield_fraction_after_first = position.borrow_asset_yield.fraction_as_u128_dividend.0;
 
         clog!(borrow_asset_deposit_active_after_first);
         clog!(borrow_asset_deposit_outgoing_after_first);
+        clog!(borrow_asset_deposit_incoming_after_first);
         clog!(borrow_asset_yield_total_after_first);
         clog!(borrow_asset_yield_next_after_first);
         clog!(borrow_asset_yield_fraction_after_first);
     }
 
     market.snapshot_with_yield_distribution(borrow_amount);
+
+    let current_snapshot_post = market.current_snapshot.clone();
+    clog!(current_snapshot_post.borrow_asset_deposited_active().amount.0);
+    clog!(current_snapshot_post.yield_distribution().amount.0);
+    clog!(current_snapshot_post.end_timestamp_ms().0);
+    clog!(current_snapshot_post.time_chunk().0.0);
+    clog!(current_snapshot_post.borrow_asset_deposited_incoming().amount.0);
+    
+    let first_finalized_snapshot = market.finalized_snapshots.get(0).unwrap();
+    clog!(first_finalized_snapshot.borrow_asset_deposited_active().amount.0);
+    clog!(first_finalized_snapshot.yield_distribution().amount.0);
+    clog!(first_finalized_snapshot.end_timestamp_ms().0);
+    clog!(first_finalized_snapshot.time_chunk().0.0);
+    clog!(first_finalized_snapshot.borrow_asset_deposited_incoming().amount.0);
 
     let mut sp_guard = SupplyPositionGuard::new(&mut market, account, position);
     sp_guard.accumulate_yield(); // after this the yield is up-to-date
@@ -281,12 +315,14 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
         let borrow_asset_deposit_active_after_second = position.get_deposit().active.amount.0;
         let borrow_asset_deposit_outgoing_after_second = position.get_deposit().outgoing.amount.0;
+        let borrow_asset_deposit_incoming_after_second = position.get_deposit().incoming.get(0).unwrap().amount.amount.0;
         let borrow_asset_yield_total_after_second = position.borrow_asset_yield.total.amount.0;
         let borrow_asset_yield_next_after_second = position.borrow_asset_yield.next_snapshot_index;
         let borrow_asset_yield_fraction_after_second = position.borrow_asset_yield.fraction_as_u128_dividend.0;
 
         clog!(borrow_asset_deposit_active_after_second);
         clog!(borrow_asset_deposit_outgoing_after_second);
+        clog!(borrow_asset_deposit_incoming_after_second);
         clog!(borrow_asset_yield_total_after_second);
         clog!(borrow_asset_yield_next_after_second);
         clog!(borrow_asset_yield_fraction_after_second);
@@ -296,7 +332,7 @@ pub fn snapshot_with_yield_and_supplier_position() {
         clog!(yield_post.amount.0);
         clog!(yield_pre.amount.0);
         
-        cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + amount.0);
+        cvlr_assert!(yield_post.amount.0 <= yield_pre.amount.0 + borrow_amount.amount.0);
     }
 }
 
