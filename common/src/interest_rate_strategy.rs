@@ -98,7 +98,7 @@ impl Linear {
 
 impl UsageCurve for Linear {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        if cfg!(feature = "certora") {
+        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             Decimal::nondet()
         } else {
             usage_ratio * (self.top - self.base) + self.base
@@ -144,7 +144,7 @@ impl Piecewise {
 
 impl UsageCurve for Piecewise {
     fn at(&self, usage_ratio: Decimal) -> Decimal {
-        if cfg!(feature = "certora") {
+        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             Decimal::nondet()
         } else {
             require!(

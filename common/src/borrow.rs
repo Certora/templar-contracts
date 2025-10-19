@@ -368,7 +368,7 @@ pub(crate) fn calculate_interest(
             .is_liquidation()
     }
 
-    #[cfg(feature = "certora")]
+    #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))]
     pub fn satisfies_mcr_maintenance(
         &mut self, 
         price_pair: &PricePair
@@ -392,7 +392,7 @@ pub(crate) fn calculate_interest(
         result
     }
 
-    #[cfg(all(not(feature = "certora"), feature = "certora_nonhealth"))]
+    #[cfg(feature = "certora_nonhealth")]
     pub fn satisfies_mcr_maintenance(
         &self, 
         price_pair: &PricePair

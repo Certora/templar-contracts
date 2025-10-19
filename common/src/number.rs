@@ -271,7 +271,7 @@ impl Decimal {
     }
 
     pub fn to_u128_floor(self) -> Option<u128> {
-        if cfg!(feature = "certora") {
+        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             TemplarNondet::nondet()
         } else {
             let truncated = self.repr >> FRACTIONAL_BITS;
@@ -284,7 +284,7 @@ impl Decimal {
     }
 
     pub fn to_u128_ceil(self) -> Option<u128> {
-        if cfg!(feature = "certora") {
+        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
             TemplarNondet::nondet()
         } else {
             let truncated = self.repr >> FRACTIONAL_BITS;
@@ -454,7 +454,7 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn sub(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     TemplarNondet::nondet()
                 } else {
                     Decimal {
@@ -468,7 +468,7 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn mul(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     Self::Output::nondet()
                 } else {
                     #[allow(clippy::cast_possible_truncation)]
@@ -490,7 +490,7 @@ macro_rules! impl_self {
             type Output = Decimal;
 
             fn div(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     TemplarNondet::nondet()
                 } else {
                     #[allow(clippy::cast_possible_truncation)]
@@ -557,7 +557,7 @@ macro_rules! impl_int {
         impl From<$t> for Decimal {
             fn from(value: $t) -> Self {
                 Self {
-                    repr: if cfg!(feature = "certora") {
+                    repr: if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                         TemplarNondet::nondet()
                     } else {
                         U512::from(value) << FRACTIONAL_BITS
@@ -572,7 +572,7 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn mul(self, rhs: $t) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     Self::Output::nondet()
                 } else {
                     Decimal { repr: self.repr * U512::from(rhs) }
@@ -585,7 +585,7 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn mul(self, rhs: $s) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     Self::Output::nondet()
                 } else {
                     Decimal { repr: U512::from(self) * rhs.repr }
@@ -637,7 +637,7 @@ macro_rules! impl_int {
             type Output = Decimal;
 
             fn sub(self, rhs: $s) -> Self::Output {
-                if cfg!(feature = "certora") {
+                if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
                     Self::Output::nondet()
                 } else {
                     Decimal::from(self) - rhs
