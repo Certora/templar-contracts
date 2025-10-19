@@ -27,8 +27,8 @@ impl <V> Vector<V>
 where
     V: TemplarNondet + Clone + BorshDeserialize + BorshSerialize
 {
-    pub fn new<S: IntoStorageKey>(v: S) -> Self {
-        Vector(SplitMap::new(near_sdk::store::Vector::new(v)))
+    pub fn new<S: IntoStorageKey>(_v: S) -> Self {
+        Vector(SplitMap::new())
     }
 
     pub fn iter(&self) -> VectorIter<'_, V> {

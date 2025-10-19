@@ -1,4 +1,6 @@
 use near_sdk::{env, json_types::U64, near};
+
+#[cfg(feature = "certora_any")]
 use crate::models::templar_nondet::*;
 
 /// Configure a method of determining the current time chunk.
@@ -10,6 +12,7 @@ pub enum TimeChunkConfiguration {
     BlockTimestampMs { divisor: U64 },
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     TimeChunkConfiguration,
     {

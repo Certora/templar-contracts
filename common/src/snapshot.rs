@@ -1,8 +1,11 @@
 use near_sdk::{env, json_types::U64, near};
 
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, interest_rate_strategy::InterestRateStrategy, models::templar_nondet::{declare_nondet, TemplarNondet}, number::Decimal, time_chunk::TimeChunk
+    asset::{BorrowAssetAmount, CollateralAssetAmount}, asset_op, interest_rate_strategy::InterestRateStrategy, number::Decimal, time_chunk::TimeChunk
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [borsh, json])]
@@ -17,6 +20,7 @@ pub struct Snapshot {
     interest_rate: Decimal,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     Snapshot,
     Snapshot {
@@ -66,6 +70,7 @@ impl Snapshot {
     pub fn usage_ratio(&self) -> Decimal {
         #[cfg(feature = "certora")]
         { Decimal::nondet() }
+
         #[cfg(not(feature = "certora"))]
         {
             if self.borrow_asset_deposited_active.is_zero() || self.borrow_asset_borrowed.is_zero() {

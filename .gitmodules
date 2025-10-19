@@ -1,6 +1,3 @@
 [submodule "contract/specs/patch/near-account-id-rs"]
 	path = contract/specs/patch/near-account-id-rs
 	url = git@github.com:Certora/near-account-id-rs.git
-[submodule "contract/specs/patch/parity-common"]
-	path = contract/specs/patch/parity-common
-	url = git@github.com:Certora/parity-common.git

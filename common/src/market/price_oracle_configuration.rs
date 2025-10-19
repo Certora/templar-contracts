@@ -1,8 +1,11 @@
 use near_sdk::{near, AccountId, Gas, Promise};
 
 use crate::{
-    models::templar_nondet::*, oracle::pyth::{ext_pyth, OracleResponse, PriceIdentifier}, price::PricePair
+    oracle::pyth::{ext_pyth, OracleResponse, PriceIdentifier}, price::PricePair
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::*; 
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[near(serializers = [json, borsh])]
@@ -15,6 +18,7 @@ pub struct PriceOracleConfiguration {
     pub price_maximum_age_s: u32,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     PriceOracleConfiguration,
     account_id, 

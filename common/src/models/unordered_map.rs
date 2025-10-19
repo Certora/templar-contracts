@@ -41,8 +41,8 @@ where
     K: std::hash::Hash + Eq + TemplarNondet + BorshSerialize + BorshDeserialize,
     V: Clone + TemplarNondet + BorshSerialize + BorshDeserialize,
 {
-    pub fn new(prefix: std::vec::Vec<u8>) -> Self {
-        UnorderedMap(SplitMap::new(near_sdk::collections::UnorderedMap::new(prefix)))
+    pub fn new(_prefix: std::vec::Vec<u8>) -> Self {
+        UnorderedMap(SplitMap::new())
     }
 
     pub fn focus(&mut self, k: K) {

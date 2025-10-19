@@ -54,6 +54,6 @@ name = "gas_report"
 name = "receipt_gas"
 
 [features]
-default = ["certora"]
+default = []
 certora = ["templar-common/certora"]
 certora_nonhealth = ["templar-common/certora_nonhealth"]

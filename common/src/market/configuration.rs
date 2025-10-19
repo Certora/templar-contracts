@@ -10,11 +10,13 @@ use crate::{
     borrow::{BorrowPosition, BorrowStatus, LiquidationReason},
     fee::{Fee, TimeBasedFee},
     interest_rate_strategy::InterestRateStrategy,
-    models::templar_nondet::{declare_nondet, *},
     number::Decimal,
     price::{PricePair, Valuation},
     time_chunk::TimeChunkConfiguration,
 };
+
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{TemplarNondet, declare_nondet};
 
 use super::{PriceOracleConfiguration, YieldWeights};
 
@@ -29,6 +31,7 @@ pub struct ValidAmountRange<A: AssetClass + PartialOrd>(
     #[borsh(deserialize_with = "deserialize_valid_amount_range")] AmountRange<A>,
 );
 
+#[cfg(feature = "certora_any")]
 impl<A: AssetClass + PartialOrd> TemplarNondet for ValidAmountRange<A> {
     fn nondet() -> Self {
         Self(AmountRange {
@@ -148,6 +151,7 @@ pub struct MarketConfiguration {
     pub liquidation_maximum_spread: Decimal,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     MarketConfiguration,
     time_chunk_configuration,
@@ -294,9 +298,12 @@ impl MarketConfiguration {
         borrow_position: &BorrowPosition,
         block_timestamp_ms: u64,
     ) -> bool {
-        if cfg!(feature = "certora") {
+        #[cfg(feature = "certora")]
+        {
             bool::nondet()
-        } else {
+        } 
+        #[cfg(not(feature = "certora"))]
+        {
             let Some(U64(maximum_duration_ms)) = self.borrow_maximum_duration_ms else {
                 return true;
             };
@@ -324,9 +331,13 @@ impl MarketConfiguration {
         borrow_position: &BorrowPosition,
         oracle_price_proof: &PricePair,
     ) -> bool {
-        if cfg!(feature = "certora") {
-            TemplarNondet::nondet()
-        } else {
+        #[cfg(feature = "certora")]
+        {
+            bool::nondet()
+        } 
+        
+        #[cfg(not(feature = "certora"))]
+        {
             satisfies_minimum_collateral_ratio(
                 self.borrow_mcr_liquidation,
                 borrow_position,

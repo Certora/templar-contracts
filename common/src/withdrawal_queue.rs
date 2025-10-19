@@ -2,8 +2,11 @@ use std::num::NonZeroU32;
 
 use near_sdk::{env, near, AccountId, BorshStorageKey, IntoStorageKey};
 
-use crate::models;
-use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
+#[cfg(not(feature = "certora_any"))]
+use near_sdk::collections::LookupMap;
+
+#[cfg(feature = "certora_any")]
+use crate::models::{templar_nondet::{declare_nondet, TemplarNondet}, lookup_map::LookupMap, vec::Vec};
 use crate::{asset::BorrowAssetAmount, asset_op};
 
 #[derive(Debug, Clone)]
@@ -15,6 +18,7 @@ pub struct QueueNode {
     next: Option<NonZeroU32>,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     QueueNode,
     QueueNode {
@@ -25,19 +29,20 @@ declare_nondet!(
     }
 );
 
-//#[derive(Debug)]
+#[cfg_attr(not(feature = "certora_any"), derive(Debug))]
 #[near(serializers = [borsh])]
 pub struct WithdrawalQueue {
-    prefix: models::vec::Vec<u8>,
+    prefix: Vec<u8>,
     length: u32,
     is_locked: bool,
     next_queue_node_id: NonZeroU32,
-    queue: models::lookup_map::LookupMap<NonZeroU32, QueueNode>,
+    queue: LookupMap<NonZeroU32, QueueNode>,
     queue_head: Option<NonZeroU32>,
     queue_tail: Option<NonZeroU32>,
-    entries: models::lookup_map::LookupMap<AccountId, NonZeroU32>,
+    entries: LookupMap<AccountId, NonZeroU32>,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     WithdrawalQueue,
     WithdrawalQueue { 
@@ -68,14 +73,17 @@ impl WithdrawalQueue {
             };
         }
         Self {
-            prefix: models::vec::Vec::new(prefix.clone()),
+            #[cfg(not(feature = "certora_any"))]
+            prefix: prefix.clone(),
+            #[cfg(feature = "certora_any")]
+            prefix: Vec::new(), // this is ignored in our model
             length: 0,
             is_locked: false,
             next_queue_node_id: NonZeroU32::MIN,
-            queue: models::lookup_map::LookupMap::new(key!(Queue)),
+            queue: LookupMap::new(key!(Queue)),
             queue_head: None,
             queue_tail: None,
-            entries: models::lookup_map::LookupMap::new(key!(Entries)),
+            entries: LookupMap::new(key!(Entries)),
         }
     }
 

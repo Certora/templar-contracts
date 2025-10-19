@@ -1,25 +1,29 @@
+#[cfg(not(feature = "certora_any"))]
 use std::collections::HashMap;
+#[cfg(feature = "certora_any")]
+use crate::models::hash_map::HashMap;
 
 use near_sdk::{
     env, near, AccountId, BorshStorageKey, IntoStorageKey,
 };
 
+#[cfg(feature = "certora_any")]
+use crate::models::lookup_map::LookupMap;
+#[cfg(feature = "certora_any")]
+use crate::models::unordered_map::UnorderedMap;
+#[cfg(not(feature = "certora_any"))]
+use near_sdk::collections::{LookupMap, UnorderedMap};
+
 use crate::{
-    asset::{BorrowAssetAmount, CollateralAssetAmount, FungibleAssetAmount},
-    asset_op,
-    borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef},
-    chunked_append_only_list::ChunkedAppendOnlyList,
-    market::{MarketConfiguration, WithdrawalResolution},
-    models::{
-        self,
-        templar_nondet::{declare_nondet, TemplarNondet},
-    },
-    number::Decimal,
-    snapshot::Snapshot,
-    static_yield::StaticYieldRecord,
-    supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
-    withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue},
-};
+    asset::{BorrowAssetAmount, CollateralAssetAmount, FungibleAssetAmount}, asset_op, borrow::{BorrowPosition, BorrowPositionGuard, BorrowPositionRef}, chunked_append_only_list::ChunkedAppendOnlyList, market::{MarketConfiguration, WithdrawalResolution}, 
+    number::Decimal, snapshot::Snapshot, static_yield::StaticYieldRecord, supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef}, withdrawal_queue::{error::WithdrawalQueueLockError, WithdrawalQueue}
+}; 
+
+#[cfg(not(feature = "certora_any"))]
+use crate::event::MarketEvent;
+        
+#[cfg(feature = "certora_any")]
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
 
 #[derive(BorshStorageKey)]
 #[near]
@@ -38,7 +42,7 @@ pub struct Market {
     /// Total amount of borrow asset earning interest in the market.
     pub borrow_asset_deposited_active: BorrowAssetAmount,
     /// Mapping of upcoming snapshot indices to amounts of borrow asset that will be activated.
-    pub borrow_asset_deposited_incoming: models::hash_map::HashMap<u32, BorrowAssetAmount>,
+    pub borrow_asset_deposited_incoming: HashMap<u32, BorrowAssetAmount>,
     /// Sending borrow asset out, because if somebody sends the contract borrow asset, it's ok for the
     /// contract to attempt to fulfill withdrawal request, even if the market thinks it doesn't have
     /// enough to fulfill.
@@ -50,19 +54,20 @@ pub struct Market {
     /// Market-wide collateral asset deposit tracking.
     pub collateral_asset_deposited: CollateralAssetAmount,
     // Meeting notes: maybe munge this?
-    pub(crate) supply_positions: models::unordered_map::UnorderedMap<AccountId, SupplyPosition>,
-    pub(crate) borrow_positions: models::unordered_map::UnorderedMap<AccountId, BorrowPosition>,
+    pub(crate) supply_positions: UnorderedMap<AccountId, SupplyPosition>,
+    pub(crate) borrow_positions: UnorderedMap<AccountId, BorrowPosition>,
     pub current_snapshot: Snapshot,
     pub finalized_snapshots: ChunkedAppendOnlyList<Snapshot, 128>,
     // Meeting notes: maybe munge this?
     pub withdrawal_queue: WithdrawalQueue,
-    pub static_yield: models::lookup_map::LookupMap<AccountId, StaticYieldRecord>,
+    pub static_yield: LookupMap<AccountId, StaticYieldRecord>,
 }
 
+#[cfg(feature = "certora_any")]
 declare_nondet!(
     Market,
     Market {
-        prefix: vec![1, 2, 3], // todo,
+        prefix: vec![1, 2, 3],
         configuration: TemplarNondet::nondet(),
         borrow_asset_deposited_active: TemplarNondet::nondet(),
         borrow_asset_deposited_incoming: TemplarNondet::nondet(),
@@ -103,16 +108,16 @@ impl Market {
             prefix: prefix.clone(),
             configuration,
             borrow_asset_deposited_active: 0.into(),
-            borrow_asset_deposited_incoming: models::hash_map::HashMap::new(HashMap::new()),
+            borrow_asset_deposited_incoming: HashMap::new(),
             borrow_asset_in_flight: 0.into(),
             borrow_asset_borrowed: 0.into(),
             collateral_asset_deposited: 0.into(),
-            supply_positions: models::unordered_map::UnorderedMap::new(key!(SupplyPositions)),
-            borrow_positions: models::unordered_map::UnorderedMap::new(key!(BorrowPositions)),
+            supply_positions: UnorderedMap::new(key!(SupplyPositions)),
+            borrow_positions: UnorderedMap::new(key!(BorrowPositions)),
             current_snapshot,
             finalized_snapshots: ChunkedAppendOnlyList::new(key!(FinalizedSnapshots)),
             withdrawal_queue: WithdrawalQueue::new(key!(WithdrawalQueue)),
-            static_yield: models::lookup_map::LookupMap::new(key!(StaticYield)),
+            static_yield: LookupMap::new(key!(StaticYield)),
         };
 
         self_.finalized_snapshots.push(first_snapshot);
@@ -120,7 +125,7 @@ impl Market {
         self_
     }
 
-    #[cfg(feature = "certora")]
+    #[cfg(feature = "certora_any")]
     pub fn focus_borrow_positions(&mut self, a: AccountId) {
         self.borrow_positions.focus(a)
     }
@@ -151,9 +156,12 @@ impl Market {
 
         // If still in current time chunk, just update the current snapshot.
         if self.current_snapshot.time_chunk == time_chunk {
-            if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
+            #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))] 
+            {
                 self.current_snapshot = Snapshot::nondet();
-            } else {
+            } 
+            #[cfg(not(all(feature = "certora", not(feature = "certora_nonhealth"))))] 
+            {
                 self.current_snapshot.update_active(
                     self.borrow_asset_deposited_active,
                     self.borrow_asset_borrowed,
@@ -175,9 +183,12 @@ impl Market {
                 .remove(&self.finalized_snapshots.len())
                 .unwrap_or(0.into());
             asset_op!(self.borrow_asset_deposited_active += deposited_incoming);
-            if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
+            #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))]
+            {
                 self.finalized_snapshots = TemplarNondet::nondet();
-            } else {
+            }
+            #[cfg(not(all(feature = "certora", not(feature = "certora_nonhealth"))))]
+            {
                 let mut snapshot = Snapshot::new(time_chunk);
                 snapshot.set_yield_distribution(yield_distribution);
                 snapshot.set_borrow_asset_deposited_incoming(deposited_incoming);
@@ -187,13 +198,13 @@ impl Market {
                     self.collateral_asset_deposited,
                     &self.configuration.borrow_interest_rate_strategy,
                 );
-            std::mem::swap(&mut snapshot, &mut self.current_snapshot);
-            #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
-            MarketEvent::SnapshotFinalized {
-                index: self.finalized_snapshots.len(),
-                snapshot: snapshot.clone(),
-            }.emit();
-            self.finalized_snapshots.push(snapshot);
+                std::mem::swap(&mut snapshot, &mut self.current_snapshot);
+                #[cfg(not(feature = "certora_any"))]
+                MarketEvent::SnapshotFinalized {
+                    index: self.finalized_snapshots.len(),
+                    snapshot: snapshot.clone(),
+                }.emit();
+                self.finalized_snapshots.push(snapshot);
             };
 
         }
@@ -201,9 +212,12 @@ impl Market {
     }
 
     pub fn get_borrow_asset_available_to_borrow(&self) -> BorrowAssetAmount {
-        if cfg!(all(feature = "certora", not(feature = "certora_nonhealth"))) {
+        #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))] 
+        {
             TemplarNondet::nondet()
-        } else {
+        }
+        #[cfg(not(all(feature = "certora", not(feature = "certora_nonhealth"))))] 
+        {
             #[allow(
                 clippy::unwrap_used,
                 reason = "Factor is guaranteed to be <=1, so value must still fit in u128"
@@ -357,9 +371,10 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            let share = if cfg!(all(feature = "certora", feature = "certora_nonhealth")) {
-                FungibleAssetAmount::nondet()
-            } else {
+            #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
+            let share = FungibleAssetAmount::nondet();
+            #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
+            let share =
                 amount
                 .split((*share_weight * amount_per_weight).to_u128_floor().unwrap())
                 // Safety:
@@ -367,8 +382,7 @@ impl Market {
                 // Guaranteed sum(share_weights) == total_weight
                 // Guaranteed sum(floor(total_amount * share_weight / total_weight) for each share_weight in share_weights) <= total_amount
                 // Therefore this should never panic.
-                .unwrap()
-            };
+                .unwrap();
 
             let mut yield_record = self.static_yield.get(account_id).unwrap_or_default();
             // Assuming borrow_asset is implemented correctly:

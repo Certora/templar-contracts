@@ -1,3 +1,4 @@
+#![cfg(any(feature = "certora", feature = "certora_nonhealth"))]
 use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, rule};
 
 use near_sdk::AccountId;

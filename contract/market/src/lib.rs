@@ -6,7 +6,10 @@ use near_sdk::{env, near, serde_json, AccountId, BorshStorageKey, PanicOnDefault
 use near_sdk_contract_tools::standard::nep145::{
     Nep145Controller, Nep145ForceUnregister, StorageBalanceBounds,
 };
-use templar_common::{market::{Market, MarketConfiguration}, models::templar_nondet::TemplarNondet};
+use templar_common::market::{Market, MarketConfiguration};
+
+#[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
+use templar_common::models::templar_nondet::TemplarNondet;
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -24,6 +27,7 @@ pub struct Contract {
     storage_usage_borrow_position: u64,
 }
 
+#[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
 impl TemplarNondet for Contract {
     fn nondet() -> Self {
         Self {
