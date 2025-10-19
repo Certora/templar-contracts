@@ -357,7 +357,7 @@ impl Market {
 
         for (account_id, share_weight) in &self.configuration.yield_weights.r#static {
             #[allow(clippy::unwrap_used, reason = "share_weight / total_weight <= 1")]
-            let share = if cfg!(all(feature = "certora", feature = "certora_nonhealth")) {
+            let share = if cfg!(any(feature = "certora", feature = "certora_nonhealth")) {
                 FungibleAssetAmount::nondet()
             } else {
                 amount
