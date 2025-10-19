@@ -266,7 +266,7 @@ pub fn snapshot_with_yield_and_supplier_position() {
 
     let time_chunk_now = market.configuration.time_chunk_configuration.now();
     clog!(time_chunk_now.0.0);
-    cvlr_assume!(time_chunk_now.0.0!=current_snapshot_pre.time_chunk().0.0);
+    cvlr_assume!(time_chunk_now.0.0!=current_snapshot_pre.time_chunk().0.0); // assumption - maybe this is why it is verified.
 
     {
         let mut sp_guard = SupplyPositionGuard::new(&mut market, account.clone(), position);

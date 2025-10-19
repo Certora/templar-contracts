@@ -145,9 +145,12 @@ impl<M: Deref<Target = Market>> SupplyPositionRef<M> {
     pub fn calculate_yield(&self, snapshot_limit: u32) -> AccumulationRecord<BorrowAsset> {
         let mut next_snapshot_index = self.position.borrow_asset_yield.get_next_snapshot_index();
 
+        clog!(next_snapshot_index);
+
         let mut amount = u128::from(self.position.borrow_asset_deposit.active);
         let mut accumulated = Decimal::ZERO;
         let mut next_incoming = 0;
+        clog!(amount);
 
         #[allow(
             clippy::cast_possible_truncation,
@@ -307,8 +310,11 @@ impl<'a> SupplyPositionGuard<'a> {
     pub fn accumulate_yield_partial(&mut self, snapshot_limit: u32) {
         require!(snapshot_limit > 0, "snapshot_limit must be nonzero");
         self.market.snapshot();
-
+        clog!(snapshot_limit);
         let accumulation_record = self.calculate_yield(snapshot_limit);
+        clog!(accumulation_record.next_snapshot_index);
+        clog!(accumulation_record.amount.amount.0);
+        clog!(accumulation_record.fraction_as_u128_dividend);
         self.activate_incoming(accumulation_record.next_snapshot_index);
 
         #[cfg(all(not(feature = "certora"), not(feature = "certora_nonhealth")))]
@@ -319,7 +325,7 @@ impl<'a> SupplyPositionGuard<'a> {
             }
             .emit();
         }
-
+        
         self.position
             .borrow_asset_yield
             .accumulate(accumulation_record);
