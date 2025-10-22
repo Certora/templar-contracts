@@ -10,30 +10,13 @@ use templar_common::{
     self_ext,
 };
 
+use models::templar_nondet::*;
+use templar_common::models;
+
 use crate::{Contract, ContractExt, ReturnStyle};
 
 /// Internal helpers.
 impl Contract {
-    #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
-    pub fn execute_next_supply_withdrawal_request_helper(&mut self) -> (WithdrawalResolution, bool) {
-        let withdrawal_resolution = self
-            .try_lock_next_withdrawal_request()
-            .unwrap_or_else(|e| env::panic_str(&e.to_string())).unwrap();
-
-        // There may be loose/untracked funds that the contract controls but
-        // does not account for in internal accounting.
-        let expect_success = u128::from(self.borrow_asset_deposited_active)
-            .saturating_add(u128::from(self.total_incoming()))
-            .checked_sub(
-                u128::from(self.borrow_asset_borrowed)
-                    .saturating_add(self.borrow_asset_in_flight.into()),
-            )
-            .is_some();
-
-        asset_op!(self.borrow_asset_in_flight += withdrawal_resolution.amount_to_account);
-        return (withdrawal_resolution, expect_success)
-    }
-
     #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
     pub fn compute_amount(&self, amount: BorrowAssetAmount) -> AccountId {
         use templar_common::models::templar_nondet::TemplarNondet;
@@ -71,7 +54,10 @@ impl Contract {
             })
     }
 
+    // #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
     pub fn execute_supply(&mut self, account_id: AccountId, amount: BorrowAssetAmount) {
+
+        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         if self.supply_position_ref(account_id.clone()).is_none() {
             self.charge_for_storage(
                 &account_id,
@@ -81,7 +67,13 @@ impl Contract {
 
         let mut supply_position = self.get_or_create_supply_position_guard(account_id);
         let proof = supply_position.accumulate_yield();
+
+        #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
+        supply_position.record_deposit(proof, amount, u64::nondet());
+
+        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         supply_position.record_deposit(proof, amount, env::block_timestamp_ms());
+
         require!(
             supply_position.is_within_allowable_range(),
             "New supply position is outside of allowable range",
