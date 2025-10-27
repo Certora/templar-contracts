@@ -1,17 +1,13 @@
+#![allow(static_mut_refs)]
+
+use cvlr::clog;
 use near_sdk::{env, near, require, serde_json, AccountId, Gas, Promise, PromiseResult};
+#[cfg(feature = "certora")]
 use templar_common::{
     asset::{
         BorrowAsset, BorrowAssetAmount, CollateralAsset, CollateralAssetAmount, FungibleAsset,
-    },
-    asset_op,
-    market::WithdrawalResolution,
-    oracle::pyth::OracleResponse,
-    price::PricePair,
-    self_ext,
+    }, asset_op, market::WithdrawalResolution, models::templar_nondet::TemplarNondet, oracle::pyth::OracleResponse, price::PricePair, self_ext
 };
-
-use models::templar_nondet::*;
-use templar_common::models;
 
 use crate::{Contract, ContractExt, ReturnStyle};
 
@@ -53,11 +49,8 @@ impl Contract {
                 }
             })
     }
-
-    // #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
+    
     pub fn execute_supply(&mut self, account_id: AccountId, amount: BorrowAssetAmount) {
-
-        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         if self.supply_position_ref(account_id.clone()).is_none() {
             self.charge_for_storage(
                 &account_id,
@@ -67,13 +60,7 @@ impl Contract {
 
         let mut supply_position = self.get_or_create_supply_position_guard(account_id);
         let proof = supply_position.accumulate_yield();
-
-        #[cfg(any(feature = "certora", feature = "certora_nonhealth"))]
-        supply_position.record_deposit(proof, amount, u64::nondet());
-
-        #[cfg(not(any(feature = "certora", feature = "certora_nonhealth")))]
         supply_position.record_deposit(proof, amount, env::block_timestamp_ms());
-
         require!(
             supply_position.is_within_allowable_range(),
             "New supply position is outside of allowable range",
@@ -93,6 +80,7 @@ impl Contract {
         // The sign-up step would only be NFT gating or something of
         // that sort, which is just an additional pre condition check.
         // -- https://github.com/Templar-Protocol/contract-mvp/pull/6#discussion_r1923871982
+        #[cfg(not(feature = "certora"))]
         if self.borrow_position_ref(account_id.clone()).is_none() {
             self.charge_for_storage(
                 &account_id,
@@ -100,11 +88,17 @@ impl Contract {
             );
         }
 
+        #[cfg(not(feature = "certora"))]
         let mut borrow_position = self.get_or_create_borrow_position_guard(account_id);
+
+        #[cfg(feature = "certora")]
+        let mut borrow_position = self.borrow_position_guard(account_id).unwrap();
+
         if borrow_position.inner().is_liquidation_locked {
             env::panic_str("Cannot add collateral while liquidation locked");
         }
         let proof = borrow_position.accumulate_interest();
+
         require!(
             !borrow_position.is_eligible_for_liquidation(price_pair, env::block_timestamp_ms()),
             "Cannot add collateral when eligible for liquidation",
@@ -138,7 +132,12 @@ impl Contract {
         amount: BorrowAssetAmount,
         price_pair: &PricePair,
     ) -> CollateralAssetAmount {
+
+        #[cfg(not(feature = "certora"))]
         let mut borrow_position = self.get_or_create_borrow_position_guard(account_id);
+
+        #[cfg(feature = "certora")]
+        let mut borrow_position = self.borrow_position_guard(account_id).unwrap();
 
         borrow_position.accumulate_interest();
 
@@ -147,9 +146,13 @@ impl Contract {
             "Borrow position is not eligible for liquidation",
         );
 
+        #[cfg(not(feature = "certora"))]
         let minimum_acceptable_amount = borrow_position
             .minimum_acceptable_liquidation_amount(price_pair)
             .unwrap_or_else(|| env::panic_str("Minimum acceptable amount calculation overflow"));
+
+        #[cfg(feature = "certora")]
+        let minimum_acceptable_amount = TemplarNondet::nondet();
 
         require!(
             amount >= minimum_acceptable_amount,

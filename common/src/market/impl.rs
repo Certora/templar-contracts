@@ -125,6 +125,12 @@ impl Market {
         self.borrow_positions.focus(a)
     }
 
+    #[cfg(feature = "certora")]
+    pub fn focus_supply_positions(&mut self, a: AccountId) {
+        self.supply_positions.focus(a)
+    }
+
+
     pub fn total_incoming(&self) -> BorrowAssetAmount {
         self.borrow_asset_deposited_incoming.values().fold(
             BorrowAssetAmount::zero(),

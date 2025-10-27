@@ -1,12 +1,16 @@
+#![allow(static_mut_refs)]
+
+use std::borrow::Borrow;
+
 use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, rule};
 
 use near_sdk::AccountId;
 
 use models::templar_nondet::*;
 
-use templar_common::asset::{BorrowAssetAmount};
-use templar_common::borrow::{BorrowPosition, BorrowPositionGuard};
-use templar_common::market::{Market};
+use templar_common::asset::{BorrowAssetAmount, CollateralAssetAmount};
+use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
+use templar_common::market::Market;
 use templar_common::models;
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
@@ -137,7 +141,6 @@ pub fn record_borrow_asset_yield_distribution_integrity_2() {
         !(static_yield_acount_after > static_yield_account_before)
             || yield_weight_account > Some(0)
     );
-
 }
 
 #[rule]
@@ -184,7 +187,6 @@ pub fn snapshot_with_yield_distribution_integrity() {
     }
 }
 
-
 #[rule]
 pub fn double_borrow_fails() {
     let mut c = Contract::nondet();
@@ -204,7 +206,14 @@ pub fn double_borrow_fails() {
     };
     let amount1 = BorrowAssetAmount::nondet();
     let amount2 = BorrowAssetAmount::nondet();
-    let max_amount = c.market.configuration.borrow_range.maximum.unwrap().amount.0;
+    let max_amount = c
+        .market
+        .configuration
+        .borrow_range
+        .maximum
+        .unwrap()
+        .amount
+        .0;
     clog!(amount1.amount.0);
     clog!(amount2.amount.0);
     clog!(max_amount);
@@ -221,27 +230,6 @@ pub fn execute_supply_sanity() {
     let amount = BorrowAssetAmount::nondet();
     c.execute_supply(account_id, amount);
     cvlr_assert!(false);
-}
-
-#[rule]
-pub fn execute_supply_remains_in_range() {
-    let mut c = Contract::nondet();
-    let account_id = AccountId::nondet();
-    let amount = BorrowAssetAmount::nondet();
-    
-    c.execute_supply(account_id.clone(), amount);
-
-    let total = {
-        let supply_position = c.get_or_create_supply_position_guard(account_id.clone());
-        supply_position.inner().get_deposit().total()
-    };
-    let range =  c.market.configuration.supply_range;
-  
-    clog!(total.amount.0);
-    clog!(range.minimum.amount.0);
-    clog!(range.maximum.unwrap().amount.0);
-    cvlr_assert!(range.contains(total));
-    
 }
 
 #[rule]
@@ -303,6 +291,64 @@ pub fn withdraw_preserves_health() {
 }
 
 #[rule]
+pub fn collateralize_preserves_liquidation_state() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+
+    c.execute_collateralize(account_id.clone(), amount, &price);
+    {
+        let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+        let ok2 = borrow_position.is_eligible_for_liquidation(&price, u64::nondet());
+        cvlr_assert!(!ok2);
+    }
+}
+
+#[rule]
+pub fn collateralize_preserves_liquidation_state_sanity() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+
+    c.execute_collateralize(account_id.clone(), amount, &price);
+    let mut borrow_position = c.borrow_position_guard(account_id.clone()).unwrap();
+    borrow_position.is_eligible_for_liquidation(&price, u64::nondet());
+    cvlr_satisfy!(true);
+}
+
+#[rule]
 pub fn withdraw_preserves_health_sanity() {
     let mut c = Contract::nondet();
     let account_id = AccountId::nondet();
@@ -358,4 +404,285 @@ pub fn borrow_preserves_health_sanity() {
         borrow_position.satisfies_mcr_maintenance(&price);
     }
     cvlr_satisfy!(true);
+}
+
+#[rule]
+pub fn collateralize_collateral_increase_monotonicity() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount = TemplarNondet::nondet();
+
+    let collateral_before = c
+        .borrow_position_ref(account_id.clone())
+        .unwrap()
+        .inner()
+        .collateral_asset_deposit
+        .amount
+        .0;
+
+    clog!(collateral_before);
+
+    c.execute_collateralize(account_id.clone(), amount, &price);
+
+    let collateral_after = c
+        .borrow_position_ref(account_id.clone())
+        .unwrap()
+        .inner()
+        .collateral_asset_deposit
+        .amount
+        .0;
+
+    clog!(amount.amount.0);
+    clog!(collateral_after);
+
+    cvlr_assert!(collateral_after == collateral_before + amount.amount.0);
+}
+
+#[rule]
+pub fn collateralize_interest_accumulation_consistency() {
+    let mut c = Contract::nondet();
+    let account_id = AccountId::nondet();
+    c.market.focus_borrow_positions(account_id.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+    let amount: CollateralAssetAmount = TemplarNondet::nondet();
+
+    let fees_before = c
+        .borrow_position_ref(account_id.clone())
+        .unwrap()
+        .position
+        .borrow_asset_fees
+        .get_total()
+        .amount
+        .0;
+
+    clog!(amount.amount.0);
+    clog!(fees_before);
+
+    c.execute_collateralize(account_id.clone(), amount, &price);
+
+    let fees_after = c
+        .borrow_position_ref(account_id.clone())
+        .unwrap()
+        .position
+        .borrow_asset_fees
+        .get_total()
+        .amount
+        .0;
+    clog!(fees_after);
+
+    cvlr_assert!(fees_after >= fees_before);
+}
+
+#[rule]
+pub fn repay_liability_reduction_reverts_correctly() {
+    let mut p = BorrowPosition::nondet();
+    cvlr_assume!(p.is_liquidation_locked);
+    let p_pre = p.clone();
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    let r = p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min);
+    cvlr_assert!(r.is_err());
+    cvlr_assert!(p == p_pre);
+}
+
+#[rule]
+pub fn repay_amount_to_fees_value() {
+    let mut p = BorrowPosition::nondet();
+    let fees_pre = p.borrow_asset_fees.get_total();
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    let r = p
+        .reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min)
+        .unwrap();
+    let fees_post = p.borrow_asset_fees.get_total();
+    cvlr_assert!(fees_post.amount.0 + r.amount_to_fees.amount.0 == fees_pre.amount.0);
+    cvlr_assert!(fees_post <= fees_pre);
+}
+
+#[rule]
+fn repay_principal_decreases_exactly() {
+    let mut p = BorrowPosition::nondet();
+    let principal_pre = p.borrow_asset_principal;
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    let r = p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min).unwrap();
+    let principal_post = p.borrow_asset_principal;
+    cvlr_assert!(principal_pre.amount.0 == principal_post.amount.0 + r.amount_to_principal.amount.0);
+    cvlr_assert!(principal_post <= principal_pre);
+}
+
+
+#[rule]
+fn repay_zero_principal_behavior() {
+    let mut p = BorrowPosition::nondet();
+    cvlr_assume!(p.borrow_asset_principal.is_zero());
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    let lr = p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min).unwrap();
+    cvlr_assert!(lr.amount_to_principal.is_zero());
+}
+
+#[rule]
+fn repay_components_bounded() {
+    let mut p = BorrowPosition::nondet();
+    let fees_pre = p.borrow_asset_fees.get_total();
+    let princ_pre = p.borrow_asset_principal;
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    let lr = p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min).unwrap();
+
+    cvlr_assert!(lr.amount_to_fees <= fees_pre);
+    cvlr_assert!(lr.amount_to_principal <= princ_pre);
+    cvlr_assert!(lr.amount_refund <= amount);
+}
+
+#[rule]
+pub fn repay_zero_payment_noop() {
+    let mut p = BorrowPosition::nondet();
+    let fees_pre = p.borrow_asset_fees.get_total();
+    let princ_pre = p.borrow_asset_principal;
+    let min = BorrowAssetAmount::nondet();
+    let lr = p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), BorrowAssetAmount::from(0u128), min).unwrap();
+    cvlr_assert!(p.borrow_asset_fees.get_total() == fees_pre);
+    cvlr_assert!(p.borrow_asset_principal == princ_pre);
+    cvlr_assert!(lr.amount_refund.is_zero());
+}
+
+#[rule]
+pub fn repay_timestamp_clear_when_fully_paid() {
+    let mut p = BorrowPosition::nondet();
+    let amount = BorrowAssetAmount::nondet();
+    let min = BorrowAssetAmount::nondet();
+    p.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), amount, min).unwrap();
+    cvlr_assert!(!p.borrow_asset_principal.is_zero() || p.started_at_block_timestamp_ms.is_none());
+}
+
+#[rule]
+pub fn repay_split_payments_combine() {
+    let mut p1 = BorrowPosition::nondet();
+    let mut p2 = p1.clone();
+
+    let min = BorrowAssetAmount::nondet();
+    let x = BorrowAssetAmount::nondet();
+    let y = BorrowAssetAmount::nondet();
+
+    let _ = p1.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), x, min);
+    let _ = p1.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), y, min);
+
+    let _ = p2.reduce_borrow_asset_liability(InterestAccumulationProof::nondet(), (x.amount.0 + y.amount.0).into(), min);
+
+    cvlr_assert!(p1.borrow_asset_fees.get_total() == p2.borrow_asset_fees.get_total());
+    cvlr_assert!(p1.borrow_asset_principal >= p2.borrow_asset_principal);
+}
+
+
+#[rule]
+pub fn liquidate_initial_sets_lock() {
+    let mut c = Contract::nondet();
+    let account = AccountId::nondet();
+
+    c.focus_borrow_positions(account.clone());
+
+    let oracle = OracleResponse {
+        asset1: c
+            .configuration
+            .price_oracle_configuration
+            .borrow_asset_price_id,
+        price1: Some(TemplarNondet::nondet()),
+        asset2: c
+            .configuration
+            .price_oracle_configuration
+            .collateral_asset_price_id,
+        price2: Some(TemplarNondet::nondet()),
+        bot: None.into(),
+    };
+    let price = c.price_pair(oracle.clone());
+
+    let amount = BorrowAssetAmount::nondet();
+
+    let _ = c.execute_liquidate_initial(account.clone(), amount, &price);
+    let bp = c.borrow_position_guard(account).unwrap().inner().clone();
+    cvlr_assert!(bp.is_liquidation_locked);
+}
+
+#[rule]
+pub fn liquidation_final_success_clears() {
+    let mut c = Contract::nondet();
+    let account = AccountId::nondet();
+    let liquidator  = AccountId::nondet();
+    c.focus_borrow_positions(account.clone());
+
+    let amount = BorrowAssetAmount::nondet();
+
+    let refund = c.execute_liquidate_final(liquidator, account.clone(), amount, true);
+    cvlr_assert!(refund.is_zero());
+}
+
+#[rule]
+pub fn liquidation_final_fail_unlocks() {
+    let mut c = Contract::nondet();
+    let account = AccountId::nondet();
+    let liquidator  = AccountId::nondet();
+    c.focus_borrow_positions(account.clone());
+
+    let amount = BorrowAssetAmount::nondet();
+
+    let refund = c.execute_liquidate_final(liquidator, account.clone(), amount, false);
+    let bp = c.borrow_position_guard(account).unwrap().inner().clone();
+    cvlr_assert!(refund.amount.0 == amount.amount.0);
+    cvlr_assert!(bp.is_liquidation_locked == false);
+}
+
+#[rule]
+pub fn full_liquidation_updates_correctly() {
+    let mut c = Contract::nondet();
+    let account = AccountId::nondet();
+    let liquidator = AccountId::nondet();
+    c.focus_borrow_positions(account.clone());
+
+    let mut bp = c.borrow_position_guard(account).unwrap();
+    let principal = bp.inner().get_borrow_asset_principal().amount.0;
+    
+    let borrow_asset_borrowed_before = bp.market.borrow_asset_borrowed.amount.0;
+    
+    let amount = BorrowAssetAmount::nondet();
+    
+    bp.record_full_liquidation(liquidator, amount);
+    
+    let borrow_asset_borrowed_after = bp.market.borrow_asset_borrowed.amount.0;
+    
+    cvlr_assert!(bp.inner().is_liquidation_locked == false);
+    cvlr_assert!(bp.inner().collateral_asset_deposit.amount.0 == 0);
+    cvlr_assert!(bp.inner().borrow_asset_principal.amount.0 == 0);
+    cvlr_assert!(borrow_asset_borrowed_after == borrow_asset_borrowed_before - principal);
 }

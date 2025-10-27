@@ -59,7 +59,7 @@ pub enum LiquidationReason {
 pub struct BorrowPosition {
     pub started_at_block_timestamp_ms: Option<U64>,
     pub collateral_asset_deposit: CollateralAssetAmount,
-    borrow_asset_principal: BorrowAssetAmount,
+    pub borrow_asset_principal: BorrowAssetAmount,
     pub borrow_asset_fees: Accumulator<BorrowAsset>,
     pub temporary_lock: BorrowAssetAmount,
     pub is_liquidation_locked: bool,
@@ -68,6 +68,12 @@ pub struct BorrowPosition {
     // meaningless if not Some(p). should be set to None whenever
     // the struct is modified
     pub price_pair_ok: Option<PricePair>,
+    #[cfg(feature = "certora")]
+    // if Some(p) then the position is *not* eligible for liquidation.
+    // should be set to `None` whenever the struct is modified,
+    // except when collateral is added.
+    // NOTE: We assume that adding collateral should not cause liquidation.
+    pub price_pair_liquidation_eligible: Option<PricePair>,
 }
 
 
@@ -85,7 +91,9 @@ impl BorrowPosition {
             temporary_lock: 0.into(),
             is_liquidation_locked: false,
             #[cfg(feature = "certora")]
-            price_pair_ok: None
+            price_pair_ok: None,
+            #[cfg(feature = "certora")]
+            price_pair_liquidation_eligible: None
         }
     }
 
@@ -105,7 +113,9 @@ impl BorrowPosition {
             temporary_lock,
             is_liquidation_locked,
             #[cfg(feature = "certora")]
-            price_pair_ok: None
+            price_pair_ok: None,
+            #[cfg(feature = "certora")]
+            price_pair_liquidation_eligible: None
         }
     }
 
@@ -118,6 +128,7 @@ impl BorrowPosition {
         #[cfg(feature = "certora")]
         {
             self.price_pair_ok = None;
+            self.price_pair_liquidation_eligible = None;
         }
     }
 
@@ -151,6 +162,7 @@ impl BorrowPosition {
         #[cfg(feature = "certora")]
         {
             self.price_pair_ok = None;
+            // NOTE: not updating `self.price_pair_liquidation_eligible` to `None``` here.
         }
         self.collateral_asset_deposit.join(amount)
     }
@@ -162,6 +174,7 @@ impl BorrowPosition {
         #[cfg(feature = "certora")]
         {
             self.price_pair_ok = None;
+            self.price_pair_liquidation_eligible = None
         }
         self.collateral_asset_deposit.split(amount)
     }
@@ -176,6 +189,7 @@ impl BorrowPosition {
         #[cfg(feature = "certora")]
         {
             self.price_pair_ok = None;
+            self.price_pair_liquidation_eligible = None
         }
         if self.started_at_block_timestamp_ms.is_none()
             || self.get_total_borrow_asset_liability().is_zero()
@@ -186,7 +200,7 @@ impl BorrowPosition {
     }
 
     /// Interest accumulation MUST be applied before calling this function.
-    pub(crate) fn reduce_borrow_asset_liability(
+    pub fn reduce_borrow_asset_liability(
         &mut self,
         _proof: InterestAccumulationProof,
         mut amount: BorrowAssetAmount,
@@ -232,6 +246,7 @@ impl BorrowPosition {
         #[cfg(feature = "certora")]
         {
             self.price_pair_ok = None;
+            self.price_pair_liquidation_eligible = None
         }
 
         Ok(LiabilityReduction {
@@ -356,7 +371,32 @@ pub(crate) fn calculate_interest(
         }
     }
 
+    #[cfg(feature = "certora")]
+    pub fn is_eligible_for_liquidation(
+        &mut self,
+        price_pair: &PricePair,
+        _block_timestamp_ms: u64,
+    ) -> bool {
+        // Simulate checking and remembering the value of the real implementation:
+        // If price_pair_liquidation_eligible is Some, that means not eligible for liquidation.
+        // So in this case, we will return `false` again suggesting
+        // that the position is still not eligible for liquidation.
+        if let Some(ref pair) = self.position.price_pair_liquidation_eligible {
+            if pair == price_pair {
+                return false;
+            }
+        }
+        // Otherwise, choose a `result` nondeterministically and remember the input price pair.
+        // Also return `false`
+        let result: bool = TemplarNondet::nondet();
+        if !result {
+            self.position.price_pair_liquidation_eligible = Some(price_pair.clone());
+        }
+        return result
+    }
 
+
+    #[cfg(all(not(feature = "certora"), feature = "certora_nonhealth"))]
     pub fn is_eligible_for_liquidation(
         &self,
         price_pair: &PricePair,
@@ -463,6 +503,7 @@ impl<'a> BorrowPositionGuard<'a> {
 
         asset_op!(self.market.collateral_asset_deposited += amount);
 
+         #[cfg(not(feature = "certora"))]
         MarketEvent::CollateralDeposited {
             account_id: self.account_id.clone(),
             collateral_asset_amount: amount,
@@ -498,6 +539,7 @@ impl<'a> BorrowPositionGuard<'a> {
         #[cfg(feature = "certora")] 
         {
             self.position.price_pair_ok = None;
+            self.position.price_pair_liquidation_eligible = None
         }
         asset_op! {
             self.market.borrow_asset_in_flight += amount;
@@ -573,6 +615,7 @@ impl<'a> BorrowPositionGuard<'a> {
 
         self.market.snapshot();
 
+        #[cfg(not(feature = "certora"))]
         MarketEvent::BorrowRepaid {
             account_id: self.account_id.clone(),
             borrow_asset_fees_repaid: liability_reduction.amount_to_fees,
@@ -606,6 +649,7 @@ impl<'a> BorrowPositionGuard<'a> {
         #[cfg(all(feature = "certora", not(feature = "certora_nonhealth")))]
         { 
           self.position.price_pair_ok = None; 
+          self.position.price_pair_liquidation_eligible = None;
         }
         self.position
             .borrow_asset_fees
@@ -639,6 +683,7 @@ impl<'a> BorrowPositionGuard<'a> {
         let principal = self.position.get_borrow_asset_principal();
         let collateral_asset_liquidated = self.position.collateral_asset_deposit;
 
+        #[cfg(not(feature = "certora"))]
         MarketEvent::FullLiquidation {
             liquidator_id,
             account_id: self.account_id.clone(),

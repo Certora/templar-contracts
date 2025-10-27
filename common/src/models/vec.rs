@@ -1,7 +1,6 @@
 use std::{cell::RefCell, marker::PhantomData};
 
 use near_sdk::near;
-use cvlr::cvlr_assert;
 
 use crate::models::{split_map::SplitMap, templar_nondet::*};
 
@@ -85,10 +84,13 @@ impl <V: TemplarNondet> TemplarNondet for Vec<V> {
 }
 
 impl <'a, V: TemplarNondet> Iterator for VecIter<'a, V> {
-    type Item = &'a V;
+    type Item = V;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if bool::nondet() { None } else { cvlr_assert!(false) /* ABAKST: TODO */; None }
+        if bool::nondet() { None
+        } else {
+            TemplarNondet::nondet()
+        }
     }
 }
 
@@ -108,7 +110,7 @@ impl<V: TemplarNondet> FromIterator<V> for Vec<V> {
 }
 
 impl<'a, T: TemplarNondet> IntoIterator for &'a Vec<T> {
-    type Item = &'a T;
+    type Item = T;
 
     type IntoIter = VecIter<'a, T>;
 
