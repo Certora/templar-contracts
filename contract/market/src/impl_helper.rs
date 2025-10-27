@@ -88,11 +88,7 @@ impl Contract {
             );
         }
 
-        #[cfg(not(feature = "certora"))]
         let mut borrow_position = self.get_or_create_borrow_position_guard(account_id);
-
-        #[cfg(feature = "certora")]
-        let mut borrow_position = self.borrow_position_guard(account_id).unwrap();
 
         if borrow_position.inner().is_liquidation_locked {
             env::panic_str("Cannot add collateral while liquidation locked");
