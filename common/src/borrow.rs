@@ -119,7 +119,7 @@ impl BorrowPosition {
         }
     }
 
-    pub(crate) fn full_liquidation(&mut self, current_snapshot_index: u32) {
+    pub fn full_liquidation(&mut self, current_snapshot_index: u32) {
         self.is_liquidation_locked = false;
         self.started_at_block_timestamp_ms = None;
         self.collateral_asset_deposit = 0.into();

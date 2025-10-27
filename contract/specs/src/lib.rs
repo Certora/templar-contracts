@@ -11,7 +11,7 @@ use models::templar_nondet::*;
 use templar_common::asset::{BorrowAssetAmount, CollateralAssetAmount};
 use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
 use templar_common::market::Market;
-use templar_common::models;
+use templar_common::{models, snapshot};
 use templar_common::models::split_map::ApplyRule;
 use templar_common::oracle::pyth::OracleResponse;
 use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
@@ -681,8 +681,7 @@ pub fn full_liquidation_updates_correctly() {
     
     let borrow_asset_borrowed_after = bp.market.borrow_asset_borrowed.amount.0;
     
-    cvlr_assert!(bp.inner().is_liquidation_locked == false);
-    cvlr_assert!(bp.inner().collateral_asset_deposit.amount.0 == 0);
-    cvlr_assert!(bp.inner().borrow_asset_principal.amount.0 == 0);
+    cvlr_assert!(!bp.inner().is_liquidation_locked);
+    cvlr_assert!(bp.inner().started_at_block_timestamp_ms.is_none());
     cvlr_assert!(borrow_asset_borrowed_after == borrow_asset_borrowed_before - principal);
 }
