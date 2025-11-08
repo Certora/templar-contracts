@@ -199,20 +199,13 @@ declare_nondet!(NonZeroU32, {
     unsafe { NonZeroU32::new_unchecked(x) }
 });
 
-pub fn nondet_bytes_sz(sz: usize) -> String {
-    unsafe {
-        let bytes = CERTORA_nondet_bytes(sz as u32);
-        String::from_raw_parts(bytes, sz, sz)
-    }
-}
-
 impl TemplarNondet for AccountId {
     #[inline(never)]
     fn nondet() -> Self {
         unsafe {
             let boxed = Box::from_raw(
                 std::ptr::slice_from_raw_parts_mut(
-                 CERTORA_nondet_bytes(8),
+                 CVT_nondet_bytes(8),
                  8 
                 )
             );
@@ -222,7 +215,7 @@ impl TemplarNondet for AccountId {
 }
 
 unsafe extern "C" {
-    pub unsafe fn CERTORA_nondet_bytes(n: u32) -> *mut u8;
+    pub unsafe fn CVT_nondet_bytes(n: u32) -> *mut u8;
 }
 
 pub trait LiftOption {
