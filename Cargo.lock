@@ -2595,6 +2595,128 @@ dependencies = [
 ]
 
 [[package]]
+name = "cvlr"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-decimal",
+ "cvlr-derive",
+ "cvlr-early-panic",
+ "cvlr-fixed",
+ "cvlr-hook",
+ "cvlr-log",
+ "cvlr-macros",
+ "cvlr-mathint",
+ "cvlr-nondet",
+ "cvlr-spec",
+]
+
+[[package]]
+name = "cvlr-asserts"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+
+[[package]]
+name = "cvlr-decimal"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-log",
+ "cvlr-mathint",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-derive"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cvlr-early-panic"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cvlr-fixed"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-log",
+ "cvlr-mathint",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-hook"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cvlr-log"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-mathint",
+]
+
+[[package]]
+name = "cvlr-macros"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "darling 0.20.10",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.111",
+]
+
+[[package]]
+name = "cvlr-mathint"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-nondet",
+]
+
+[[package]]
+name = "cvlr-nondet"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+]
+
+[[package]]
+name = "cvlr-spec"
+version = "0.5.0"
+source = "git+https://github.com/Certora/cvlr.git#53260b71b599ae1d6c02e7c129e188655bdd9446"
+dependencies = [
+ "cvlr-asserts",
+ "cvlr-log",
+ "cvlr-macros",
+ "cvlr-mathint",
+ "cvlr-nondet",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.158"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12362,6 +12484,24 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "templar-market-specs"
+version = "1.2.1"
+dependencies = [
+ "borsh 1.5.7",
+ "cvlr",
+ "getrandom 0.2.15",
+ "near-contract-standards",
+ "near-sdk",
+ "near-sdk-contract-tools",
+ "near-workspaces 0.21.0",
+ "rstest",
+ "templar-common",
+ "templar-market-contract",
+ "test-utils",
+ "tokio",
 ]
 
 [[package]]

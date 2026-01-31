@@ -31,3 +31,6 @@ workspace = true
 default = []
 rpc = ["dep:clap", "dep:near-jsonrpc-client", "dep:near-primitives"]
 non-contract-usage = ["near-sdk/non-contract-usage"]
+
+certora = []
+certora_nonhealth = []
