@@ -1,0 +1,6 @@
+[submodule "contract/specs/patch/near-account-id-rs"]
+	path = contract/specs/patch/near-account-id-rs
+	url = https://github.com/Certora/near-account-id-rs/tree/8200710823e0d4da22616b391e5846b97f290a33
+[submodule "contract/specs/patch/parity-common"]
+	path = contract/specs/patch/parity-common
+	url = https://github.com/Certora/parity-common/tree/c41d51df8a314150c46cbbff31f8140a35dfb02c
