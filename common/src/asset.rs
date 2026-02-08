@@ -16,6 +16,8 @@ use near_sdk::{
 
 use crate::{number::Decimal, panic_with_message};
 
+use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}};
+
 /// Assets may be configuread as one of the supported asset types.
 ///
 /// The following asset contract standards are supported:
@@ -46,6 +48,12 @@ pub struct FungibleAsset<T: AssetClass> {
     kind: FungibleAssetKind,
 }
 
+impl<T: AssetClass> TemplarNondet for FungibleAsset<T> {
+    fn nondet() -> Self {
+        FungibleAsset { discriminant: PhantomData, kind: TemplarNondet::nondet() }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[near(serializers = [json, borsh])]
 enum FungibleAssetKind {
@@ -55,6 +63,19 @@ enum FungibleAssetKind {
         token_id: String,
     },
 }
+
+declare_nondet!(
+    FungibleAssetKind,
+    nondet_choice!(
+        Self::Nep141(AccountId::nondet()),
+        Self::Nep245 { 
+            contract_id: AccountId::nondet(), 
+            token_id: unsafe {
+                std::mem::transmute([u32::nondet(), u32::nondet(), u32::nondet()])
+            }
+        }
+    )
+);
 
 impl<T: AssetClass> FungibleAsset<T> {
     /// Gas for simple transfers (`ft_transfer`)
@@ -404,6 +425,15 @@ pub struct FungibleAssetAmount<T: AssetClass> {
     amount: U128,
     #[borsh(skip)]
     discriminant: PhantomData<T>,
+}
+
+impl <T: AssetClass> TemplarNondet for FungibleAssetAmount<T> {
+    fn nondet() -> Self {
+        Self {
+            amount: U128(cvlr::nondet()),
+            discriminant: PhantomData
+        }
+    }
 }
 
 impl<T: AssetClass> Debug for FungibleAssetAmount<T> {

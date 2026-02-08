@@ -7,6 +7,7 @@ use near_sdk_contract_tools::standard::nep145::{
     Nep145Controller, Nep145ForceUnregister, StorageBalanceBounds,
 };
 use templar_common::market::{Market, MarketConfiguration};
+use templar_common::models::templar_nondet::TemplarNondet;
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -22,6 +23,17 @@ pub struct Contract {
     storage_usage_snapshot: u64,
     storage_usage_supply_position: u64,
     storage_usage_borrow_position: u64,
+}
+
+impl TemplarNondet for Contract {
+    fn nondet() -> Self {
+        Self {
+            market: TemplarNondet::nondet(),
+            storage_usage_snapshot: TemplarNondet::nondet(),
+            storage_usage_supply_position: TemplarNondet::nondet(),
+            storage_usage_borrow_position: TemplarNondet::nondet(),
+        }
+    }
 }
 
 #[near]

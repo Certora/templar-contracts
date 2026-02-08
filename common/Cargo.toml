@@ -13,6 +13,7 @@ near-sdk.workspace = true
 thiserror.workspace = true
 primitive-types.workspace = true
 schemars.workspace = true
+cvlr.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 clap = { workspace = true, optional = true }
@@ -33,4 +34,3 @@ rpc = ["dep:clap", "dep:near-jsonrpc-client", "dep:near-primitives"]
 non-contract-usage = ["near-sdk/non-contract-usage"]
 
 certora = []
-certora_nonhealth = []

@@ -3,6 +3,7 @@ use near_sdk::{json_types::U64, near};
 use crate::{
     asset::{AssetClass, FungibleAssetAmount},
     number::Decimal,
+    models::templar_nondet::{nondet_choice, TemplarNondet}
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -10,6 +11,15 @@ use crate::{
 pub enum Fee<T: AssetClass> {
     Flat(FungibleAssetAmount<T>),
     Proportional(Decimal),
+}
+
+impl<T: AssetClass> TemplarNondet for Fee<T> {
+    fn nondet() -> Self {
+        nondet_choice!(
+            Self::Flat(TemplarNondet::nondet()),
+            Self::Proportional(TemplarNondet::nondet())
+        )
+    }
 }
 
 impl<T: AssetClass> Fee<T> {
@@ -33,6 +43,20 @@ pub struct TimeBasedFee<T: AssetClass> {
     pub fee: Fee<T>,
     pub duration: U64,
     pub behavior: TimeBasedFeeFunction,
+}
+
+impl <T: AssetClass> TemplarNondet for TimeBasedFee<T> {
+    fn nondet() -> Self {
+        Self {
+            fee: Fee::nondet(),
+            duration: U64::nondet(),
+            behavior: if bool::nondet() {
+                TimeBasedFeeFunction::Fixed
+            } else {
+                TimeBasedFeeFunction::Linear
+            }
+        }
+    }
 }
 
 impl<T: AssetClass> TimeBasedFee<T> {

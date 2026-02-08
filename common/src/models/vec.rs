@@ -8,6 +8,7 @@ use crate::models::{split_map::SplitMap, templar_nondet::*};
 #[near(serializers = [json, borsh])]
 pub struct Vec<V>(SplitMap<usize, V, std::vec::Vec<V>>);
 pub struct VecIter<'a, V: 'a> { p: PhantomData<&'a V> }
+pub struct VecIterMut<'a, V: 'a> { v: RefCell<V>, p: PhantomData<&'a mut V> }
 pub struct IntoIter<V> { p: PhantomData<V> }
 
 impl<V: TemplarNondet> Default for Vec<V> {
@@ -26,6 +27,10 @@ where
 
     pub fn iter(&self) -> VecIter<'_, V> {
         VecIter { p: PhantomData }
+    }
+
+    pub fn iter_mut(&mut self) -> VecIterMut<'_, V> {
+        VecIterMut { v: RefCell::new(V::nondet()), p: PhantomData }
     }
 
     pub fn get<I>(&self, index: I) -> Option<&V>
@@ -75,6 +80,16 @@ where
             }
         )
     }
+
+    pub fn remove(&mut self, index: usize) -> V {
+        if self.0.the_x == index {
+            let v = self.0.the_v.clone().unwrap_or_else(TemplarNondet::nondet);
+            self.0.the_v = None;
+            v
+        } else {
+            TemplarNondet::nondet()
+        }
+    }
 }
 
 impl <V: TemplarNondet> TemplarNondet for Vec<V> {
@@ -90,6 +105,19 @@ impl <'a, V: TemplarNondet> Iterator for VecIter<'a, V> {
         if bool::nondet() { None
         } else {
             TemplarNondet::nondet()
+        }
+    }
+}
+
+impl <'a, V: TemplarNondet> Iterator for VecIterMut<'a, V> {
+    type Item = &'a mut V;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if bool::nondet() {
+            None
+        } else {
+            self.v.replace(V::nondet());
+            unsafe { Some(&mut *self.v.as_ptr()) }
         }
     }
 }
@@ -119,6 +147,16 @@ impl<'a, T: TemplarNondet> IntoIterator for &'a Vec<T> {
     }
 }
 
+impl<'a, T: TemplarNondet> IntoIterator for &'a mut Vec<T> {
+    type Item = &'a mut T;
+
+    type IntoIter = VecIterMut<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecIterMut { v: RefCell::new(T::nondet()), p: PhantomData }
+    }
+}
+
 impl<T: TemplarNondet> IntoIterator for Vec<T> {
     type Item = T;
 
@@ -129,10 +167,24 @@ impl<T: TemplarNondet> IntoIterator for Vec<T> {
     }
 }
 
+impl<V> std::ops::Index<usize> for Vec<V>
+where
+    V: TemplarNondet + Clone,
+{
+    type Output = V;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        if let Some(v) = self.get(index) {
+            v
+        } else {
+            self.0.bot.replace(TemplarNondet::nondet());
+            unsafe { &*self.0.bot.as_ptr() }
+        }
+    }
+}
+
 impl <V: PartialEq> PartialEq for Vec<V> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
-
-

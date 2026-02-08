@@ -6,6 +6,8 @@ use crate::{
     time_chunk::TimeChunk,
 };
 
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [borsh, json])]
 pub struct Snapshot {
@@ -17,6 +19,19 @@ pub struct Snapshot {
     pub yield_distribution: BorrowAssetAmount,
     pub interest_rate: Decimal,
 }
+
+declare_nondet!(
+    Snapshot,
+    Snapshot {
+        time_chunk: TimeChunk(U64::nondet()),
+        end_timestamp_ms: U64::nondet(),
+        borrow_asset_deposited_active: BorrowAssetAmount::nondet(),
+        borrow_asset_borrowed: BorrowAssetAmount::nondet(),
+        collateral_asset_deposited: CollateralAssetAmount::nondet(),
+        yield_distribution: BorrowAssetAmount::nondet(),
+        interest_rate: Decimal::nondet()
+    }
+);
 
 impl Snapshot {
     pub fn new(time_chunk: TimeChunk) -> Self {

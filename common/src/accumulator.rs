@@ -1,6 +1,7 @@
 use near_sdk::{json_types::U128, near, require};
 
-use crate::asset::{AssetClass, FungibleAssetAmount};
+use crate::asset::{AssetClass, BorrowAsset, FungibleAssetAmount};
+use crate::models::templar_nondet::TemplarNondet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[near(serializers = [borsh, json])]
@@ -22,6 +23,21 @@ impl<T: AssetClass> Accumulator<T> {
             pending_estimate: 0.into(),
         }
     }
+
+        pub(crate) fn new_raw(
+        total: FungibleAssetAmount<T>,
+        fraction_as_u128_dividend: U128,
+        next_snapshot_index: u32,
+        pending_estimate: FungibleAssetAmount<T>,
+    ) -> Self {
+        Self {
+            total,
+            fraction_as_u128_dividend,
+            next_snapshot_index,
+            pending_estimate,
+        }
+    }
+
 
     pub fn get_next_snapshot_index(&self) -> u32 {
         self.next_snapshot_index
@@ -73,6 +89,17 @@ pub struct AccumulationRecord<T: AssetClass> {
     pub(crate) fraction_as_u128_dividend: u128,
     pub(crate) next_snapshot_index: u32,
 }
+
+impl TemplarNondet for AccumulationRecord<BorrowAsset> {
+    fn nondet() -> Self {
+        AccumulationRecord {
+            amount: FungibleAssetAmount::<BorrowAsset>::nondet(),
+            fraction_as_u128_dividend: u128::nondet(),
+            next_snapshot_index: u32::nondet(),
+        }
+    }
+}
+
 
 impl<T: AssetClass> AccumulationRecord<T> {
     pub fn get_amount(&self) -> FungibleAssetAmount<T> {

@@ -1,7 +1,4 @@
-use near_sdk::{
-    collections::{LookupMap, UnorderedMap},
-    env, near, AccountId, BorshStorageKey, IntoStorageKey,
-};
+use near_sdk::{env, near, AccountId, BorshStorageKey, IntoStorageKey};
 
 use crate::{
     accumulator::{AccumulationRecord, Accumulator},
@@ -11,6 +8,10 @@ use crate::{
     event::MarketEvent,
     incoming_deposit::IncomingDeposit,
     market::MarketConfiguration,
+    models::{
+        self,
+        templar_nondet::{declare_nondet, TemplarNondet},
+    },
     number::Decimal,
     snapshot::Snapshot,
     supply::{SupplyPosition, SupplyPositionGuard, SupplyPositionRef},
@@ -45,7 +46,7 @@ pub struct Market {
     /// Total amount of borrow asset earning interest in the market.
     pub borrow_asset_deposited_active: BorrowAssetAmount,
     /// Upcoming snapshot indices with amounts of borrow asset that will be activated.
-    pub borrow_asset_deposited_incoming: Vec<IncomingDeposit>,
+    pub borrow_asset_deposited_incoming: crate::models::vec::Vec<IncomingDeposit>,
     pub borrow_asset_withdrawal_in_flight: BorrowAssetAmount,
     /// Sending borrow asset out, because if somebody sends the contract borrow asset, it's ok for the
     /// contract to attempt to fulfill withdrawal request, even if the market thinks it doesn't have
@@ -57,15 +58,38 @@ pub struct Market {
     pub borrow_asset_borrowed: BorrowAssetAmount,
     /// Market-wide collateral asset deposit tracking.
     pub collateral_asset_deposited: CollateralAssetAmount,
-    pub(crate) supply_positions: UnorderedMap<AccountId, SupplyPosition>,
-    pub(crate) borrow_positions: UnorderedMap<AccountId, BorrowPosition>,
+    pub(crate) supply_positions: models::unordered_map::UnorderedMap<AccountId, SupplyPosition>,
+    pub(crate) borrow_positions: models::unordered_map::UnorderedMap<AccountId, BorrowPosition>,
     pub current_time_chunk: TimeChunk,
     pub current_yield_distribution: BorrowAssetAmount,
     pub finalized_snapshots: ChunkedAppendOnlyList<Snapshot, 32>,
     pub withdrawal_queue: WithdrawalQueue,
-    pub static_yield: LookupMap<AccountId, Accumulator<BorrowAsset>>,
+    pub static_yield: models::lookup_map::LookupMap<AccountId, Accumulator<BorrowAsset>>,
     single_snapshot_maximum_interest_precomputed: Decimal,
 }
+
+declare_nondet!(
+    Market,
+    Market {
+        prefix: vec![1, 2, 3],
+        configuration: TemplarNondet::nondet(),
+        borrow_asset_balance: TemplarNondet::nondet(),
+        borrow_asset_deposited_active: TemplarNondet::nondet(),
+        borrow_asset_deposited_incoming: TemplarNondet::nondet(),
+        borrow_asset_withdrawal_in_flight: TemplarNondet::nondet(),
+        borrow_asset_borrowed_in_flight: TemplarNondet::nondet(),
+        borrow_asset_borrowed: TemplarNondet::nondet(),
+        collateral_asset_deposited: TemplarNondet::nondet(),
+        supply_positions: TemplarNondet::nondet(),
+        borrow_positions: TemplarNondet::nondet(),
+        current_time_chunk: TemplarNondet::nondet(),
+        current_yield_distribution: TemplarNondet::nondet(),
+        finalized_snapshots: TemplarNondet::nondet(),
+        withdrawal_queue: TemplarNondet::nondet(),
+        static_yield: TemplarNondet::nondet(),
+        single_snapshot_maximum_interest_precomputed: TemplarNondet::nondet(),   
+    }
+);
 
 impl Market {
     pub fn new(prefix: impl IntoStorageKey, configuration: MarketConfiguration) -> Self {
@@ -95,18 +119,18 @@ impl Market {
             configuration,
             borrow_asset_balance: 0.into(),
             borrow_asset_deposited_active: 0.into(),
-            borrow_asset_deposited_incoming: Vec::new(),
+            borrow_asset_deposited_incoming: models::vec::Vec::new(Vec::new()),
             borrow_asset_withdrawal_in_flight: 0.into(),
             borrow_asset_borrowed_in_flight: 0.into(),
             borrow_asset_borrowed: 0.into(),
             collateral_asset_deposited: 0.into(),
-            supply_positions: UnorderedMap::new(key!(SupplyPositions)),
-            borrow_positions: UnorderedMap::new(key!(BorrowPositions)),
+            supply_positions: models::unordered_map::UnorderedMap::new(key!(SupplyPositions)),
+            borrow_positions: models::unordered_map::UnorderedMap::new(key!(BorrowPositions)),
             current_time_chunk: last_time_chunk,
             current_yield_distribution: 0.into(),
             finalized_snapshots: ChunkedAppendOnlyList::new(key!(FinalizedSnapshots)),
             withdrawal_queue: WithdrawalQueue::new(key!(WithdrawalQueue)),
-            static_yield: LookupMap::new(key!(StaticYield)),
+            static_yield: models::lookup_map::LookupMap::new(key!(StaticYield)),
             single_snapshot_maximum_interest_precomputed,
         };
 

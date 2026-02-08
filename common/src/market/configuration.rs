@@ -10,12 +10,14 @@ use crate::{
     borrow::{BorrowStatus, LiquidationReason},
     fee::{Fee, TimeBasedFee},
     interest_rate_strategy::InterestRateStrategy,
+    models::templar_nondet::{declare_nondet, *},
     number::Decimal,
     price::{Convert, PricePair},
     snapshot::Snapshot,
     time_chunk::TimeChunkConfiguration,
     YEAR_PER_MS,
 };
+
 
 use super::{PriceOracleConfiguration, YieldWeights};
 
@@ -29,6 +31,16 @@ pub const APY_LIMIT: u128 = 100_000;
 pub struct ValidAmountRange<A: AssetClass + PartialOrd>(
     #[borsh(deserialize_with = "deserialize_valid_amount_range")] AmountRange<A>,
 );
+
+
+impl<A: AssetClass + PartialOrd> TemplarNondet for ValidAmountRange<A> {
+    fn nondet() -> Self {
+        Self(AmountRange {
+            minimum: TemplarNondet::nondet(),
+            maximum: TemplarNondet::nondet(),
+        })
+    }
+}
 
 fn deserialize_valid_amount_range<
     R: borsh::io::Read,
@@ -177,6 +189,45 @@ pub struct MarketConfiguration {
     pub liquidation_maximum_spread: Decimal,
 }
 
+declare_nondet!(
+    MarketConfiguration,
+    time_chunk_configuration,
+    borrow_asset,
+    collateral_asset,
+    price_oracle_configuration,
+    borrow_mcr_maintenance,
+    borrow_mcr_liquidation,
+    borrow_asset_maximum_usage_ratio,
+    borrow_origination_fee,
+    borrow_interest_rate_strategy,
+    borrow_maximum_duration_ms,
+    borrow_range,
+    supply_range,
+    supply_withdrawal_range,
+    supply_withdrawal_fee,
+    yield_weights,
+    protocol_account_id,
+    liquidation_maximum_spread => MarketConfiguration {
+    time_chunk_configuration,
+    borrow_asset,
+    collateral_asset,
+    price_oracle_configuration,
+    borrow_mcr_maintenance,
+    borrow_mcr_liquidation,
+    borrow_asset_maximum_usage_ratio,
+    borrow_origination_fee,
+    borrow_interest_rate_strategy,
+    borrow_maximum_duration_ms,
+    borrow_range,
+    supply_range,
+    supply_withdrawal_range,
+    supply_withdrawal_fee,
+    yield_weights,
+    protocol_account_id,
+    liquidation_maximum_spread
+    }
+);
+
 pub mod error {
     use std::fmt::Display;
 
@@ -298,12 +349,16 @@ impl MarketConfiguration {
         started_at_block_timestamp_ms: u64,
         block_timestamp_ms: u64,
     ) -> bool {
-        let Some(U64(maximum_duration_ms)) = self.borrow_maximum_duration_ms else {
-            return true;
-        };
-        block_timestamp_ms
-            .checked_sub(started_at_block_timestamp_ms)
-            .is_none_or(|duration_ms| duration_ms <= maximum_duration_ms)
+        if cfg!(feature = "certora") {
+            bool::nondet()
+        } else {
+            let Some(U64(maximum_duration_ms)) = self.borrow_maximum_duration_ms else {
+                return true;
+            };
+            block_timestamp_ms
+                .checked_sub(started_at_block_timestamp_ms)
+                .is_none_or(|duration_ms| duration_ms <= maximum_duration_ms)
+        }
     }
 
     pub fn minimum_acceptable_liquidation_amount(

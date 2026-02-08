@@ -22,6 +22,8 @@ pub mod withdrawal_queue;
 pub use primitive_types;
 pub use schemars;
 
+pub mod models;
+
 /// Panic helper that works in both WASM and native contexts.
 ///
 /// In WASM contexts (contract compilation), uses `near_sdk::env::panic_str`.

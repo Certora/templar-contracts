@@ -7,6 +7,10 @@ use crate::{
     asset::{BorrowAssetAmount, CollateralAssetAmount},
     number::Decimal,
 };
+
+use crate::models::templar_nondet::declare_nondet;
+use crate::models::templar_nondet::TemplarNondet;
+
 mod configuration;
 pub use configuration::{MarketConfiguration, ValidAmountRange, APY_LIMIT};
 mod external;
@@ -36,6 +40,11 @@ pub struct YieldWeights {
     pub supply: NonZeroU16,
     pub r#static: HashMap<AccountId, u16>,
 }
+
+
+declare_nondet!(YieldWeights,
+    supply, r#static => YieldWeights { supply, r#static }
+);
 
 impl YieldWeights {
     /// # Panics

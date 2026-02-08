@@ -24,6 +24,37 @@ use near_sdk::{
     near,
 };
 
+
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
+
+#[cfg(feature = "certora")]
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct OracleResponse {
+    pub asset1: PriceIdentifier,
+    pub price1: Option<Price>,
+    pub asset2: PriceIdentifier,
+    pub price2: Option<Price>,
+    pub bot: std::cell::RefCell<Option<Price>> ,
+}
+
+#[cfg(feature = "certora")]
+impl OracleResponse {
+    pub fn get(&self, asset: &PriceIdentifier) -> Option<&Option<Price>> {
+        if *asset == self.asset1 {
+            Some(&self.price1)
+        } else if *asset == self.asset2 {
+            Some(&self.price2)
+        } else {
+            use crate::models::templar_nondet::LiftOption;
+
+            self.bot.replace(TemplarNondet::nondet());
+            unsafe { (&*self.bot.as_ptr()).nondet_option() }
+        }
+    }
+}
+
+#[cfg(not(feature = "certora"))]
 pub type OracleResponse = HashMap<PriceIdentifier, Option<Price>>;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -35,6 +66,12 @@ pub struct PriceIdentifier(
     )]
     pub [u8; 32],
 );
+
+impl TemplarNondet for PriceIdentifier {
+    fn nondet() -> Self {
+        PriceIdentifier(TemplarNondet::nondet())
+    }
+}
 
 impl std::fmt::Debug for PriceIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -67,6 +104,18 @@ pub struct Price {
     pub expo: i32,
     /// Unix timestamp of when this price was computed
     pub publish_time: i64,
+}
+
+impl TemplarNondet for Price {
+    #[inline(never)]
+    fn nondet() -> Self {
+        Price {
+            price: TemplarNondet::nondet(),
+            conf: TemplarNondet::nondet(),
+            expo: i32::nondet(),
+            publish_time: i64::nondet(),
+        }
+    }
 }
 
 #[ext_contract(ext_pyth)]

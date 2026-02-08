@@ -5,6 +5,9 @@ use crate::{
     price::PricePair,
 };
 
+use crate::models::templar_nondet::declare_nondet;
+use crate::models::templar_nondet::TemplarNondet;
+
 /// Oracle configuration.
 ///
 /// Supports oracles that implement
@@ -26,6 +29,23 @@ pub struct PriceOracleConfiguration {
     /// will be considered stale and rejected.
     pub price_maximum_age_s: u32,
 }
+
+declare_nondet!(
+    PriceOracleConfiguration,
+    account_id, 
+    collateral_asset_price_id, 
+    collateral_asset_decimals,
+    borrow_asset_price_id,
+    borrow_asset_decimals,
+    price_maximum_age_s => PriceOracleConfiguration { 
+        account_id, 
+        collateral_asset_price_id, 
+        collateral_asset_decimals,
+        borrow_asset_price_id,
+        borrow_asset_decimals,
+        price_maximum_age_s
+    }
+);
 
 impl PriceOracleConfiguration {
     // Usually seems to take 1.64 TGas, but LST adapter contract may require as much as 14.

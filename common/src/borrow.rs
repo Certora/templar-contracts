@@ -9,6 +9,7 @@ use crate::{
     market::{Market, SnapshotProof},
     number::Decimal,
     price::{Appraise, Convert, PricePair, Valuation},
+    models::templar_nondet::TemplarNondet,
     YEAR_PER_MS,
 };
 
@@ -85,6 +86,26 @@ impl BorrowPosition {
             fees: 0.into(),
             borrow_asset_in_flight: 0.into(),
             collateral_asset_in_flight: 0.into(),
+        }
+    }
+
+    pub fn new_raw(
+        started_at_block_timestamp_ms: Option<U64>,
+        collateral_asset_deposit: CollateralAssetAmount,
+        borrow_asset_principal: BorrowAssetAmount,
+        interest: Accumulator<BorrowAsset>,
+        fees: BorrowAssetAmount,
+        borrow_asset_in_flight: BorrowAssetAmount,
+        collateral_asset_in_flight: CollateralAssetAmount,
+    ) -> Self {
+        Self {
+            started_at_block_timestamp_ms,
+            collateral_asset_deposit,
+            borrow_asset_principal,
+            interest ,
+            fees,
+            borrow_asset_in_flight,
+            collateral_asset_in_flight,
         }
     }
 
@@ -656,8 +677,13 @@ impl<'a> BorrowPositionGuard<'a> {
     }
 
     pub fn accumulate_interest_partial(&mut self, snapshot_limit: u32) {
-        let accumulation_record = self.calculate_interest(snapshot_limit);
+        let accumulation_record: AccumulationRecord<BorrowAsset> = if cfg!(feature = "certora") {
+            AccumulationRecord::nondet()
+        } else { 
+            self.calculate_interest(snapshot_limit)
+        };
 
+        #[cfg(not(feature = "certora"))]
         if !accumulation_record.amount.is_zero() {
             MarketEvent::InterestAccumulated {
                 account_id: self.account_id.clone(),

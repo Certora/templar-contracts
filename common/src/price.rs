@@ -2,6 +2,8 @@ use std::marker::PhantomData;
 
 use primitive_types::U256;
 
+use crate::models::templar_nondet::TemplarNondet;
+
 use crate::{
     asset::{AssetClass, BorrowAsset, CollateralAsset, FungibleAssetAmount},
     number::Decimal,
@@ -14,6 +16,29 @@ pub struct Price<T: AssetClass> {
     price: u128,
     confidence: u128,
     exponent: i32,
+}
+
+#[cfg(feature = "certora")]
+impl <T: AssetClass> PartialEq for Price<T> {
+    fn eq(&self, other: &Self) -> bool {
+        // No short-circuiting
+        (self._asset == other._asset) & 
+        (self.price == other.price) & 
+        (self.confidence == other.confidence) & 
+        (self.exponent == other.exponent)
+    }
+}
+
+impl<T: AssetClass> TemplarNondet for crate::price::Price<T> {
+    #[inline(never)]
+    fn nondet() -> Self {
+        crate::price::Price {
+            _asset: PhantomData,
+            price: TemplarNondet::nondet(),
+            confidence: TemplarNondet::nondet(),
+            exponent: TemplarNondet::nondet(),
+        }
+    }
 }
 
 pub mod error {

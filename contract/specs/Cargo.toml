@@ -49,4 +49,3 @@ workspace = true
 
 [features]
 certora = ["templar-common/certora", "templar-market-contract/certora"]
-certora_nonhealth = ["templar-common/certora_nonhealth", "templar-market-contract/certora_nonhealth"]

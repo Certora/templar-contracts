@@ -1,11 +1,12 @@
 use std::{
-    num::{NonZeroU16, NonZeroU32}
+    collections::HashMap,
+    num::{NonZeroU16, NonZeroU32},
 };
 
 use near_sdk::{json_types::U128, AccountId};
 
 use crate::{
-    accumulator::Accumulator, asset::BorrowAsset, borrow::BorrowPosition, static_yield::StaticYieldRecord, supply::{IncomingDeposit, SupplyPosition}
+    accumulator::Accumulator, asset::BorrowAsset, borrow::BorrowPosition, supply::{SupplyPosition}, incoming_deposit::IncomingDeposit
 };
 
 #[inline(never)]
@@ -133,11 +134,37 @@ declare_nondet!(
     total,
     fraction_as_u128_dividend,
     next_snapshot_index,
-    pending_estimate,
-    amortized =>
-    Accumulator::new_raw(total, fraction_as_u128_dividend, next_snapshot_index, pending_estimate, amortized)
+    pending_estimate =>
+    Accumulator::new_raw(total, fraction_as_u128_dividend, next_snapshot_index, pending_estimate)
 );
 declare_nondet!(IncomingDeposit, amount, activate_at_snapshot_index => IncomingDeposit { amount, activate_at_snapshot_index });
+
+impl<K, V> TemplarNondet for HashMap<K, V>
+where
+    K: TemplarNondet + Eq + std::hash::Hash,
+    V: TemplarNondet,
+{
+    fn nondet() -> Self {
+        let mut map = HashMap::new();
+        if bool::nondet() {
+            map.insert(TemplarNondet::nondet(), TemplarNondet::nondet());
+        }
+        map
+    }
+}
+
+declare_nondet!(
+    Vec<IncomingDeposit>,
+    {
+        let len = u8::nondet() % 5; // a nondet number of elements, up to 5
+        let mut vec = Vec::new();
+        for _ in 0..len {
+            vec.push(IncomingDeposit::nondet());
+        }
+        vec
+    }
+);
+
 declare_nondet!(option);
 // declare_nondet!(AccountId,
 //     {
@@ -164,27 +191,23 @@ declare_nondet!(
 );
 
 declare_nondet!(
-BorrowPosition,
+    BorrowPosition,
+    started_at_block_timestamp_ms,
+    collateral_asset_deposit,
+    borrow_asset_principal,
+    interest,
+    fees,
+    borrow_asset_in_flight,
+    collateral_asset_in_flight =>
+    BorrowPosition::new_raw(
         started_at_block_timestamp_ms,
         collateral_asset_deposit,
         borrow_asset_principal,
-        borrow_asset_fees,
-        temporary_lock,
-        is_liquidation_locked =>
-        BorrowPosition::new_raw(
-        started_at_block_timestamp_ms,
-        collateral_asset_deposit,
-        borrow_asset_principal,
-        borrow_asset_fees,
-        temporary_lock,
-        is_liquidation_locked
-        )
-    );
-
-declare_nondet!(
-    StaticYieldRecord,
-    collateral_asset, borrow_asset =>
-    StaticYieldRecord { collateral_asset, borrow_asset }
+        interest,
+        fees,
+        borrow_asset_in_flight,
+        collateral_asset_in_flight
+    )
 );
 
 declare_nondet!(NonZeroU16, {

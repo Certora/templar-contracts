@@ -52,6 +52,19 @@ impl SupplyPosition {
         }
     }
 
+    pub(crate) fn new_raw(
+        started_at_block_timestamp_ms: Option<U64>,
+        borrow_asset_deposit: Deposit,
+        borrow_asset_yield: Accumulator<BorrowAsset>,
+    ) -> Self {
+        Self {
+            started_at_block_timestamp_ms,
+            borrow_asset_deposit,
+            borrow_asset_yield,
+        }
+
+    }
+
     pub fn get_deposit(&self) -> &Deposit {
         &self.borrow_asset_deposit
     }

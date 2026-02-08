@@ -12334,6 +12334,7 @@ version = "1.2.1"
 dependencies = [
  "borsh 1.5.7",
  "clap",
+ "cvlr",
  "hex",
  "near-contract-standards",
  "near-jsonrpc-client 0.18.0",

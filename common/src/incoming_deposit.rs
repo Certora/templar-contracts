@@ -8,3 +8,5 @@ pub struct IncomingDeposit {
     pub activate_at_snapshot_index: u32,
     pub amount: BorrowAssetAmount,
 }
+
+use crate::models::templar_nondet::{declare_nondet, TemplarNondet};

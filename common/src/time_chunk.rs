@@ -1,4 +1,5 @@
 use near_sdk::{env, json_types::U64, near};
+use crate::models::templar_nondet::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [json, borsh])]
@@ -8,11 +9,30 @@ pub enum V0 {
     BlockTimestampMs { divisor: U64 },
 }
 
+
+declare_nondet!(
+    V0,
+    {
+        nondet_choice!(
+            V0::BlockHeight { divisor: TemplarNondet::nondet() },
+            V0::EpochHeight { divisor: TemplarNondet::nondet() },
+            V0::BlockTimestampMs { divisor: TemplarNondet::nondet() }
+        )
+    }
+);
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [json, borsh])]
 pub struct V1 {
     pub duration_ms: U64,
 }
+
+declare_nondet!(
+    V1,
+    V1 {
+        duration_ms: TemplarNondet::nondet(),
+    }
+);
 
 /// Configure a method of determining the current time chunk.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -24,6 +44,16 @@ pub enum TimeChunkConfiguration {
     #[serde(untagged)]
     V1(V1),
 }
+
+declare_nondet!(
+    TimeChunkConfiguration,
+    {
+        nondet_choice!(
+            TimeChunkConfiguration::V0(TemplarNondet::nondet()),
+            TimeChunkConfiguration::V1(TemplarNondet::nondet())
+        )
+    }
+);
 
 impl TimeChunkConfiguration {
     pub fn new(duration_ms: u64) -> Self {
@@ -59,6 +89,13 @@ impl TimeChunkConfiguration {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[near(serializers = [borsh, json])]
 pub struct TimeChunk(pub U64);
+
+impl TemplarNondet for TimeChunk {
+    fn nondet() -> Self {
+        TimeChunk(TemplarNondet::nondet())
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

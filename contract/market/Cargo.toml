@@ -55,4 +55,3 @@ name = "receipt_gas"
 [features]
 default = ["certora"]
 certora = ["templar-common/certora"]
-certora_nonhealth = ["templar-common/certora_nonhealth"]
