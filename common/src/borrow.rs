@@ -484,6 +484,7 @@ impl<'a> BorrowPositionGuard<'a> {
         self.position.collateral_asset_deposit += amount;
         self.market.collateral_asset_deposited += amount;
 
+        #[cfg(not(feature = "certora"))]
         MarketEvent::CollateralDeposited {
             account_id: self.account_id.clone(),
             collateral_asset_amount: amount,
@@ -622,6 +623,7 @@ impl<'a> BorrowPositionGuard<'a> {
 
             self.market.borrow_asset_borrowed += borrow.amount;
 
+            #[cfg(not(feature = "certora"))]
             MarketEvent::BorrowWithdrawn {
                 account_id: self.account_id.clone(),
                 borrow_asset_amount: borrow.amount,

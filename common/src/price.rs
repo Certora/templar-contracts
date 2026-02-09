@@ -86,6 +86,15 @@ pub struct PricePair {
     pub borrow: Price<BorrowAsset>,
 }
 
+impl TemplarNondet for PricePair {
+    fn nondet() -> Self {
+        Self {
+            collateral: TemplarNondet::nondet(),
+            borrow: TemplarNondet::nondet(),
+        }
+    }
+}
+
 impl PricePair {
     /// # Errors
     ///
