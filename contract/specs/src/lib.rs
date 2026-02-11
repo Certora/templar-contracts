@@ -11,6 +11,7 @@ use templar_common::market::ValidAmountRange;
 use templar_common::models::templar_nondet::TemplarNondet;
 use templar_common::number::Decimal;
 
+// https://prover.certora.com/output/33158/d92bf327e25f4ed1a747abee7a5c5905
 #[rule]
 pub fn double_borrow_not_allowed() {
 
