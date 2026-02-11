@@ -11,7 +11,7 @@ use templar_common::market::ValidAmountRange;
 use templar_common::models::templar_nondet::TemplarNondet;
 use templar_common::number::Decimal;
 
-// https://prover.certora.com/output/33158/d92bf327e25f4ed1a747abee7a5c5905
+// https://prover.certora.com/output/33158/46ee9bf4424c48e387614c7637c236f3
 #[rule]
 pub fn double_borrow_not_allowed() {
 
@@ -33,8 +33,8 @@ pub fn double_borrow_not_allowed() {
         borrow_asset_balance: TemplarNondet::nondet(),
         borrow_asset_deposited_active: TemplarNondet::nondet(),
         borrow_asset_deposited_incoming_total: TemplarNondet::nondet(),
-        borrow_asset_borrowed_in_flight: BorrowAssetAmount::zero(),
-        current_yield_distribution: BorrowAssetAmount::zero(),
+        borrow_asset_borrowed_in_flight: TemplarNondet::nondet(),
+        current_yield_distribution: TemplarNondet::nondet(),
         single_snapshot_maximum_interest_precomputed: TemplarNondet::nondet(),
     };
 
