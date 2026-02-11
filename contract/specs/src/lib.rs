@@ -1,74 +1,57 @@
 #![allow(static_mut_refs)]
 
-use std::borrow::Borrow;
+use cvlr::{cvlr_assert, cvlr_assume, rule};
 
-use cvlr::{clog, cvlr_assert, cvlr_assume, cvlr_satisfy, rule};
+mod borrow;
 
-use near_sdk::AccountId;
-
-use models::templar_nondet::*;
-
-use templar_common::asset::{BorrowAssetAmount, CollateralAssetAmount};
-use templar_common::borrow::{BorrowPosition, BorrowPositionGuard, InterestAccumulationProof};
-use templar_common::market::Market;
-use templar_common::{models, snapshot};
-use templar_common::models::split_map::ApplyRule;
-use templar_common::oracle::pyth::OracleResponse;
-use templar_common::supply::{SupplyPosition, SupplyPositionGuard};
-use templar_market_contract::Contract;
+use crate::borrow::{SimpleBorrowPositionGuard, SimpleMarket, SimpleMarketConfiguration};
+use templar_common::asset::BorrowAssetAmount;
+use templar_common::borrow::BorrowPosition;
+use templar_common::market::ValidAmountRange;
+use templar_common::models::templar_nondet::TemplarNondet;
+use templar_common::number::Decimal;
 
 #[rule]
 pub fn double_borrow_not_allowed() {
-    let mut c = Contract::nondet();
-    let account_id = AccountId::nondet();
 
     let amount1 = BorrowAssetAmount::nondet();
     let amount2 = BorrowAssetAmount::nondet();
 
-    cvlr_assume!(!amount1.is_zero());
-    cvlr_assume!(!amount2.is_zero());
+    let minimum = BorrowAssetAmount::nondet();
+    let maximum = Some(BorrowAssetAmount::nondet());
 
-    let max_amount: u128 = c
-        .market
-        .configuration
-        .borrow_range
-        .maximum
-        .unwrap()
-        .into();
+    let borrow_range = ValidAmountRange::try_from((minimum, maximum)).unwrap();
+    let max = borrow_range.maximum.unwrap();
 
-    let total = u128::from(amount1) + u128::from(amount2);
-    
-    cvlr_assume!(total > max_amount);
+    let mut market = SimpleMarket {
+        configuration: SimpleMarketConfiguration {
+            borrow_range,
+            borrow_asset_maximum_usage_ratio: TemplarNondet::nondet(),
+            borrow_origination_fee: TemplarNondet::nondet(),
+        },
+        borrow_asset_balance: TemplarNondet::nondet(),
+        borrow_asset_deposited_active: TemplarNondet::nondet(),
+        borrow_asset_deposited_incoming_total: TemplarNondet::nondet(),
+        borrow_asset_borrowed_in_flight: BorrowAssetAmount::zero(),
+        current_yield_distribution: BorrowAssetAmount::zero(),
+        single_snapshot_maximum_interest_precomputed: TemplarNondet::nondet(),
+    };
 
-    let price_pair = TemplarNondet::nondet();
+    let position: BorrowPosition = TemplarNondet::nondet();
 
-    // Ensure the borrow position exists.
-    let snapshot = c.market.snapshot();
-    let mut borrow_position =
-        c.market
-            .get_or_create_borrow_position_guard(snapshot, account_id.clone());
+    let mut bpg = SimpleBorrowPositionGuard::new(&mut market, position);
 
-    // Borrow 1
-    let proof_1 = borrow_position.accumulate_interest();
-    let first = borrow_position.record_borrow_initial(
-        snapshot,
-        proof_1,
-        amount1,
-        &price_pair,
-        u64::nondet(),
-    );
-
+    let first = bpg.record_borrow_initial(amount1);
     cvlr_assume!(first.is_ok());
 
-    // Borrow 2 - should fail
-    let proof_2 = borrow_position.accumulate_interest();
-    let second = borrow_position.record_borrow_initial(
-        snapshot,
-        proof_2,
-        amount2,
-        &price_pair,
-        u64::nondet(),
-    );
+
+    let current_principal = u128::from(bpg.borrow_asset_principal());
+    cvlr_assume!(current_principal <= u128::MAX - u128::from(amount2));
+
+    let total_after_second = BorrowAssetAmount::from(current_principal + u128::from(amount2));
+    cvlr_assume!(total_after_second > max);
+
+    let second = bpg.record_borrow_initial(amount2);
 
     cvlr_assert!(second.is_err());
 }

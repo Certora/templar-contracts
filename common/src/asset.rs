@@ -16,7 +16,7 @@ use near_sdk::{
 
 use crate::{number::Decimal, panic_with_message};
 
-use crate::{models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet}};
+use crate::models::templar_nondet::{declare_nondet, nondet_choice, TemplarNondet};
 
 /// Assets may be configuread as one of the supported asset types.
 ///

@@ -25,7 +25,7 @@ use near_sdk::{
 };
 
 
-use crate::models::templar_nondet::{declare_nondet, TemplarNondet};
+use crate::models::templar_nondet::TemplarNondet;
 
 #[cfg(feature = "certora")]
 #[near(serializers = [borsh, json])]

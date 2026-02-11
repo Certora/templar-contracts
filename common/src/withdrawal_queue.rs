@@ -1,6 +1,6 @@
 use std::num::NonZeroU32;
 
-use near_sdk::{collections::LookupMap, near, AccountId, BorshStorageKey, IntoStorageKey};
+use near_sdk::{near, AccountId, BorshStorageKey, IntoStorageKey};
 
 use crate::asset::BorrowAssetAmount;
 

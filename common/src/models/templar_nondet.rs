@@ -153,18 +153,6 @@ where
     }
 }
 
-declare_nondet!(
-    Vec<IncomingDeposit>,
-    {
-        let len = u8::nondet() % 5; // a nondet number of elements, up to 5
-        let mut vec = Vec::new();
-        for _ in 0..len {
-            vec.push(IncomingDeposit::nondet());
-        }
-        vec
-    }
-);
-
 declare_nondet!(option);
 // declare_nondet!(AccountId,
 //     {

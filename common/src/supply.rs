@@ -10,6 +10,7 @@ use crate::{
     market::{Market, Withdrawal},
     number::Decimal,
     YEAR_PER_MS,
+    models,
 };
 
 /// This struct can only be constructed after accumulating yield on a
@@ -21,7 +22,7 @@ pub struct YieldAccumulationProof(());
 #[near(serializers = [json, borsh])]
 pub struct Deposit {
     pub active: BorrowAssetAmount,
-    pub incoming: Vec<IncomingDeposit>,
+    pub incoming: models::vec::Vec<IncomingDeposit>,
     pub outgoing: BorrowAssetAmount,
 }
 

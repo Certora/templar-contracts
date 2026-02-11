@@ -1,5 +1,5 @@
 use borsh::{BorshDeserialize, BorshSerialize};
-use near_sdk::{near, store::Vector, BorshStorageKey, IntoStorageKey};
+use near_sdk::{near, BorshStorageKey, IntoStorageKey};
 use crate::models::{self, templar_nondet::TemplarNondet};
 
 #[derive(Debug, Clone, Copy, BorshSerialize, BorshStorageKey, PartialEq, Eq, PartialOrd, Ord)]
